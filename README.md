@@ -1,57 +1,57 @@
 # ViralSim
 
-A network propagation simulation platform that models how information, influence, or viral content spreads through social networks.
+Plataforma de simulación de propagación en redes que modela cómo la información, influencia o contenido viral se propaga a través de redes sociales.
 
-## Overview
+## Descripción General
 
-ViralSim is a web-based application that simulates the propagation of information across networks using three different propagation models:
+ViralSim es una aplicación web que simula la propagación de información a través de redes utilizando tres modelos de propagación diferentes:
 
-- **Viral Model**: Each node propagates with its own probability
-- **Independent Cascade**: Edge-based propagation with single activation attempt
-- **Threshold Model**: Social pressure-based adoption (percentage-based)
+- **Modelo Viral**: Cada nodo se propaga con su propia probabilidad
+- **Cascada Independiente**: Propagación basada en aristas con un único intento de activación
+- **Modelo de Umbral**: Adopción basada en presión social (basada en porcentaje)
 
-## Features
+## Características
 
-- **Simulation Engine**: Step-by-step execution of propagation models on network graphs
-- **Network Generation**: Watts-Strogatz topology generation for realistic network structures
-- **Real-time Metrics**: Calculates network centrality, adoption rates, and propagation statistics
-- **Interactive Visualization**: Web-based frontend for graph visualization and control
-- **Persistent Storage**: MySQL database for storing simulations and historical data
+- **Motor de Simulación**: Ejecución paso a paso de modelos de propagación en grafos de red
+- **Generación de Redes**: Generación de topología Watts-Strogatz para estructuras de red realistas
+- **Métricas en Tiempo Real**: Calcula centralidad de red, tasas de adopción y estadísticas de propagación
+- **Visualización Interactiva**: Interfaz web para visualización y control de grafos
+- **Almacenamiento Persistente**: Base de datos MySQL para guardar simulaciones y datos históricos
 
-## Project Structure
+## Estructura del Proyecto
 
 ```
-backend/          # Java simulation engine
-├── models/       # Graph, Node, Edge, State definitions
-├── propagation/  # Propagation model implementations
-├── engine/       # Simulation orchestration
-├── metrics/      # Metrics calculation
-├── database/     # Data access layer (DAOs)
-└── utils/        # Utilities and generators
+backend/          # Motor de simulación Java
+├── models/       # Definiciones de Grafo, Nodo, Arista, Estado
+├── propagation/  # Implementaciones de modelos de propagación
+├── engine/       # Orquestación de simulación
+├── metrics/      # Cálculo de métricas
+├── database/     # Capa de acceso a datos (DAOs)
+└── utils/        # Utilidades y generadores
 
-frontend/         # Web interface (HTML/JS/CSS)
-database/         # SQL schema and seed data
-docs/             # Technical documentation
+frontend/         # Interfaz web (HTML/JS/CSS)
+database/         # Esquema SQL y datos iniciales
+docs/             # Documentación técnica
 ```
 
-## Tech Stack
+## Stack Tecnológico
 
-- **Backend**: Java with Maven
+- **Backend**: Java con Maven
 - **Frontend**: HTML, CSS, JavaScript
-- **Database**: MySQL
-- **Architecture**: Multi-layered (Models → Propagation → Engine → Metrics → Database)
+- **Base de Datos**: MySQL
+- **Arquitectura**: Multicapa (Modelos → Propagación → Motor → Métricas → Base de Datos)
 
-## Getting Started
+## Primeros Pasos
 
-1. Configure database connection in the backend
-2. Run schema.sql to create tables
-3. Build the backend: `mvn clean install`
-4. Deploy frontend to web server
-5. Run simulations through the web interface
+1. Configura la conexión a la base de datos en el backend
+2. Ejecuta schema.sql para crear las tablas
+3. Construye el backend: `mvn clean install`
+4. Despliega el frontend en el servidor web
+5. Ejecuta simulaciones a través de la interfaz web
 
-## Documentation
+## Documentación
 
-- `docs/ARCHITECTURE.md` - System overview
-- `docs/BACKEND.md` - Java classes and APIs
-- `docs/DATABASE.md` - Schema and relationships
-- `docs/FRONTEND.md` - UI components and features
+- `docs/ARCHITECTURE.md` - Descripción general del sistema
+- `docs/BACKEND.md` - Clases Java y APIs
+- `docs/DATABASE.md` - Esquema y relaciones
+- `docs/FRONTEND.md` - Componentes y características de UI
