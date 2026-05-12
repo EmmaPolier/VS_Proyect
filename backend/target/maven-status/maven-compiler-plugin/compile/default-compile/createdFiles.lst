@@ -1,0 +1,6 @@
+com\viralsim\models\Nodo.class
+com\viralsim\models\Simulacion.class
+com\viralsim\models\HistorialInfeccion.class
+com\viralsim\models\Arista.class
+com\viralsim\ViralSimApplication.class
+com\viralsim\models\Estado.class
