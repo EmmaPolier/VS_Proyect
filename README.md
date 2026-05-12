@@ -31,7 +31,6 @@ backend/          # Motor de simulación Java
 
 frontend/         # Interfaz web (HTML/JS/CSS)
 database/         # Esquema SQL y datos iniciales
-docs/             # Documentación técnica
 ```
 
 ## Stack Tecnológico
