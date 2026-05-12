@@ -4,6 +4,7 @@ com\viralsim\repositories\AristaRepository.class
 com\viralsim\controllers\PasoSimulacionController.class
 com\viralsim\models\EstadoCatalogo.class
 com\viralsim\repositories\NodoSimulacionRepository.class
+com\viralsim\utils\WattsStrogatzGenerator.class
 com\viralsim\ViralSimApplication.class
 com\viralsim\controllers\NodoSimulacionController.class
 com\viralsim\models\Nodo.class
@@ -25,6 +26,7 @@ com\viralsim\api\GlobalExceptionHandler.class
 com\viralsim\controllers\AristaController.class
 com\viralsim\services\NodoService.class
 com\viralsim\repositories\NodoRepository.class
+com\viralsim\ViralSimApplication$1.class
 com\viralsim\services\GrafoService.class
 com\viralsim\controllers\NodoController.class
 com\viralsim\repositories\SimulacionRepository.class

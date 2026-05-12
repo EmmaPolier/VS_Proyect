@@ -2,6 +2,8 @@ package com.viralsim.controllers;
 
 import com.viralsim.models.Grafo;
 import com.viralsim.services.GrafoService;
+import com.viralsim.utils.WattsStrogatzGenerator;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,14 +14,16 @@ import java.util.List;
 public class GrafoController {
     
     private final GrafoService grafoService;
+    private final WattsStrogatzGenerator generator;
 
-    public GrafoController(GrafoService grafoService) {
+    public GrafoController(GrafoService grafoService, WattsStrogatzGenerator generator) {
         this.grafoService = grafoService;
+        this.generator = generator;
     }
 
-    @PostMapping
-    public ResponseEntity<Grafo> crearGrafo(@RequestParam int totalNodos) {
-        return ResponseEntity.ok(grafoService.crearGrafo(totalNodos));
+    @PostMapping("/crear")
+    public ResponseEntity<Grafo> crearGrafo() {
+        return ResponseEntity.ok(generator.crearGrafo());
     }
 
     @GetMapping
