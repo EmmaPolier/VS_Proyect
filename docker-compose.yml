@@ -1,0 +1,16 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: viralsim_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: viralSim_graph
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./database/init:/docker-entrypoint-initdb.d
+      - viralsim_data:/var/lib/mysql
+
+volumes:
+  viralsim_data:

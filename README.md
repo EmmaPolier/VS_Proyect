@@ -47,10 +47,3 @@ database/         # Esquema SQL y datos iniciales
 3. Construye el backend: `mvn clean install`
 4. Despliega el frontend en el servidor web
 5. Ejecuta simulaciones a través de la interfaz web
-
-## Documentación
-
-- `docs/ARCHITECTURE.md` - Descripción general del sistema
-- `docs/BACKEND.md` - Clases Java y APIs
-- `docs/DATABASE.md` - Esquema y relaciones
-- `docs/FRONTEND.md` - Componentes y características de UI
