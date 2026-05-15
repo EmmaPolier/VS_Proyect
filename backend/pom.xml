@@ -62,6 +62,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- JGraphT (para modelar grafos de contactos y calcular metricas) -->
+        <dependency>
+        <groupId>org.jgrapht</groupId>
+            <artifactId>jgrapht-core</artifactId>
+            <version>1.5.2</version>
+        </dependency>
     </dependencies>
 
     <!-- Configuración del Build -->

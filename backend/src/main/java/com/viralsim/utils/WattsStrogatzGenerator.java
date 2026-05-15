@@ -1,11 +1,23 @@
 package com.viralsim.utils;
 
-import com.viralsim.models.*;
-import com.viralsim.repositories.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import com.viralsim.metrics.CalculadorMetricas;
+import com.viralsim.models.Arista;
+import com.viralsim.models.EstadoCatalogo;
+import com.viralsim.models.Grafo;
+import com.viralsim.models.Nodo;
+import com.viralsim.repositories.AristaRepository;
+import com.viralsim.repositories.EstadoCatalogoRepository;
+import com.viralsim.repositories.GrafoRepository;
+import com.viralsim.repositories.NodoRepository;
 
 @Component
 public class WattsStrogatzGenerator {
@@ -14,6 +26,7 @@ public class WattsStrogatzGenerator {
     @Autowired private NodoRepository nodoRepository;
     @Autowired private AristaRepository aristaRepository;
     @Autowired private EstadoCatalogoRepository estadoRepository;
+    @Autowired private CalculadorMetricas calculadorMetricas;
 
     private final Random random = new Random();
 
@@ -21,6 +34,7 @@ public class WattsStrogatzGenerator {
         Grafo grafo = new Grafo();
         grafo.setTotalNodos(250);
         grafo = grafoRepository.save(grafo);
+        final int grafoId = grafo.getId();
 
         EstadoCatalogo estadoNoInformado = estadoRepository.findById(0).orElseThrow();
         EstadoCatalogo estadoInformado = estadoRepository.findById(2).orElseThrow();
@@ -113,6 +127,17 @@ public class WattsStrogatzGenerator {
                 }
             }
         }
+
+        // Calcular métricas de centralidad después de generar la red completa
+        List<Nodo> nodosTotales = nodoRepository.findAll().stream()
+                .filter(n -> n.getGrafo().getId().equals(grafoId))
+                .toList();
+        List<Arista> aristasTotales = aristaRepository.findAll().stream()
+                .filter(a -> a.getNodoOrigen().getGrafo().getId().equals(grafoId))
+                .toList();
+        
+        calculadorMetricas.calcularTodasLasMetricas(grafo, nodosTotales, aristasTotales);
+
         return grafo;
     }
 }
