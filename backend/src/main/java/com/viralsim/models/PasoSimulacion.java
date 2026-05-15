@@ -30,4 +30,10 @@ public class PasoSimulacion {
     
     @Column(nullable = false)
     private Integer totalResistentes = 0;
+
+    @Column(nullable = false)
+    private Integer totalPasivos = 0;
+
+    @Column(nullable = false)
+    private Integer totalInformados = 0;
 }

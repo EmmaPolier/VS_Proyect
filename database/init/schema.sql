@@ -146,6 +146,8 @@ CREATE TABLE PasoSimulacion (
   nuevosInformados INT NOT NULL DEFAULT 0,
   totalActivos     INT NOT NULL DEFAULT 0,
   totalResistentes INT NOT NULL DEFAULT 0,
+  totalPasivos     INT NOT NULL DEFAULT 0,
+  totalInformados  INT NOT NULL DEFAULT 0,
 
   CONSTRAINT pk_pasoSim                   PRIMARY KEY (id),
   CONSTRAINT fk_pasoSim_simulacion        FOREIGN KEY (simulacionId) REFERENCES Simulacion(id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -153,7 +155,9 @@ CREATE TABLE PasoSimulacion (
   CONSTRAINT ck_pasoSim_numeroPaso        CHECK       (numeroPaso       >= 0),
   CONSTRAINT ck_pasoSim_nuevosInformados  CHECK       (nuevosInformados >= 0),
   CONSTRAINT ck_pasoSim_totalActivos      CHECK       (totalActivos     >= 0),
-  CONSTRAINT ck_pasoSim_totalResistentes  CHECK       (totalResistentes >= 0)
+  CONSTRAINT ck_pasoSim_totalResistentes  CHECK       (totalResistentes >= 0),
+  CONSTRAINT ck_pasoSim_totalPasivos      CHECK       (totalPasivos     >= 0),
+  CONSTRAINT ck_pasoSim_totalInformados   CHECK       (totalInformados  >= 0)
 );
 
 -- ─────────────────────────────────────────

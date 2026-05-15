@@ -39,7 +39,7 @@ public class NodoSimulacionService {
 
         NodoSimulacion ns = new NodoSimulacion();
         ns.setSimulacion(simulacion);
-        ns.setPaso(paso);
+        ns.setPasoSimulacion(paso);
         ns.setNodo(nodo);
         ns.setEstado(estado);
         ns.setPasoInfeccion(pasoInfeccion);
@@ -48,7 +48,7 @@ public class NodoSimulacionService {
 
     public List<NodoSimulacion> obtenerPorPaso(int pasoId) {
         return nodoSimulacionRepository.findAll().stream()
-                .filter(ns -> ns.getPaso().getId().equals(pasoId))
+                .filter(ns -> ns.getPasoSimulacion().getId().equals(pasoId))
                 .toList();
     }
 }

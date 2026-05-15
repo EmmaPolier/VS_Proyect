@@ -21,7 +21,7 @@ public class NodoSimulacion {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "pasoId", nullable = false)
-    private PasoSimulacion paso;
+    private PasoSimulacion pasoSimulacion;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "nodoId", nullable = false)

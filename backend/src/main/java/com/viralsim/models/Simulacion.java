@@ -5,8 +5,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
-import org.springframework.cglib.core.Local;
-
 @Entity
 @Table(name = "Simulacion")
 @Data
