@@ -138,6 +138,8 @@ public class WattsStrogatzGenerator {
         
         calculadorMetricas.calcularTodasLasMetricas(grafo, nodosTotales, aristasTotales);
 
+        // Persistir los valores calculados en BD
+            nodoRepository.saveAll(nodosTotales);
         return grafo;
     }
 }

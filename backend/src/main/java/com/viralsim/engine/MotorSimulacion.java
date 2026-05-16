@@ -1,11 +1,30 @@
 package com.viralsim.engine;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import com.viralsim.models.*;
-import com.viralsim.repositories.*;
-import java.util.*;
-import java.util.stream.Collectors;
+
+import com.viralsim.models.Arista;
+import com.viralsim.models.EstadoCatalogo;
+import com.viralsim.models.Grafo;
+import com.viralsim.models.ModeloPropagacion;
+import com.viralsim.models.Nodo;
+import com.viralsim.models.NodoSimulacion;
+import com.viralsim.models.PasoSimulacion;
+import com.viralsim.models.Simulacion;
+import com.viralsim.repositories.AristaRepository;
+import com.viralsim.repositories.EstadoCatalogoRepository;
+import com.viralsim.repositories.GrafoRepository;
+import com.viralsim.repositories.ModeloPropagacionRepository;
+import com.viralsim.repositories.NodoRepository;
+import com.viralsim.repositories.NodoSimulacionRepository;
+import com.viralsim.repositories.PasoSimulacionRepository;
+import com.viralsim.repositories.SimulacionRepository;
 
 @Service
 public class MotorSimulacion {

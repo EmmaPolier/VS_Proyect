@@ -1,5 +1,6 @@
 package com.viralsim.services;
 
+import com.viralsim.models.Arista;
 import com.viralsim.models.Grafo;
 import com.viralsim.models.ModeloPropagacion;
 import com.viralsim.models.Nodo;
@@ -14,6 +15,8 @@ import com.viralsim.repositories.PasoSimulacionRepository;
 import com.viralsim.repositories.NodoSimulacionRepository;
 import com.viralsim.dto.MetricasSimulacion;
 import org.springframework.stereotype.Service;
+import com.viralsim.repositories.AristaRepository;  
+import com.viralsim.metrics.CalculadorMetricas;
 
 import java.util.List;
 
@@ -26,19 +29,25 @@ public class SimulacionService {
     private final NodoRepository nodoRepository;
     private final PasoSimulacionRepository pasoSimulacionRepository;
     private final NodoSimulacionRepository nodoSimulacionRepository;
+    private final AristaRepository aristaRepository;
+    private final CalculadorMetricas calculadorMetricas;
 
     public SimulacionService(SimulacionRepository simulacionRepository,
             GrafoRepository grafoRepository,
             ModeloPropagacionRepository modeloRepository,
             NodoRepository nodoRepository,
             PasoSimulacionRepository pasoSimulacionRepository,
-            NodoSimulacionRepository nodoSimulacionRepository) {
+            NodoSimulacionRepository nodoSimulacionRepository,
+            AristaRepository aristaRepository,
+            CalculadorMetricas calculadorMetricas) {
         this.simulacionRepository = simulacionRepository;
         this.grafoRepository = grafoRepository;
         this.modeloRepository = modeloRepository;
         this.nodoRepository = nodoRepository;
         this.pasoSimulacionRepository = pasoSimulacionRepository;
         this.nodoSimulacionRepository = nodoSimulacionRepository;
+        this.aristaRepository = aristaRepository;
+        this.calculadorMetricas = calculadorMetricas;
     }
 
     public Simulacion crearSimulacion(int grafoId, int modeloId, int nodoSemillaId) {
@@ -70,7 +79,7 @@ public class SimulacionService {
      * @param simulacionId ID de la simulación
      * @return DTO con las métricas principales
      */
-    public MetricasSimulacion obtenerMetricas(int simulacionId) {
+    /**public MetricasSimulacion obtenerMetricas(int simulacionId) {
         Simulacion sim = obtenerPorId(simulacionId);
         
         // Calcular alcance porcentaje
@@ -86,9 +95,67 @@ public class SimulacionService {
             sim.getTotalInformados(),
             sim.getPaso50Porciento(),
             sim.getResultado(),
-            alcance
+            alcance,
+            sim.getTopGrado(),
+            sim.getTopBetweenness()
         );
     }
+*/
+        public MetricasSimulacion obtenerMetricas(int id) {
+    Simulacion simulacion = simulacionRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Simulación no encontrada"));
+
+    Grafo grafo = simulacion.getGrafo();
+
+    List<Nodo> nodos = nodoRepository.findAll().stream()
+            .filter(n -> n.getGrafo().getId().equals(grafo.getId()))
+            .toList();
+
+    List<Arista> aristas = aristaRepository.findAll().stream()
+            .filter(a -> a.getNodoOrigen().getGrafo().getId().equals(grafo.getId()))
+            .toList();
+
+    // Calcular métricas
+    calculadorMetricas.calcularTodasLasMetricas(grafo, nodos, aristas);
+
+    // Total informados
+    long totalInformados = nodos.stream()
+            .filter(n -> n.getEstado().getNombre().equalsIgnoreCase("Informado"))
+            .count();
+
+    // Alcance en porcentaje
+    double alcancePorcentaje = (double) totalInformados / nodos.size() * 100;
+
+    // Paso en que se alcanza el 50% (simplificado)
+    int paso50 = (int) Math.ceil(nodos.size() * 0.5);
+
+    // Top nodos por centralidad
+    List<Nodo> topGrado = nodos.stream()
+            .sorted((n1, n2) -> Double.compare(n2.getCentralidadGrado(), n1.getCentralidadGrado()))
+            .toList();
+
+    List<Nodo> topBetweenness = nodos.stream()
+            .sorted((n1, n2) -> Double.compare(n2.getBetweenness(), n1.getBetweenness()))
+            .toList();
+
+    // Construir DTO con los datos
+    return new MetricasSimulacion(
+            simulacion.getId(),
+            grafo.getId(),
+            simulacion.getModelo().getId(),
+            simulacion.getNodoSemilla().getId(),
+            simulacion.getIniciadaEn(),
+            simulacion.getTotalPasos(),
+            (int) totalInformados,
+            paso50,
+            "OK",
+            alcancePorcentaje,
+            topGrado,
+            topBetweenness
+        );
+    }
+
+
 
     /**
      * Obtiene todos los pasos de una simulación.

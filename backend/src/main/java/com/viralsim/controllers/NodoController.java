@@ -2,6 +2,7 @@ package com.viralsim.controllers;
 
 import java.util.List;
 
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,17 +13,21 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.viralsim.models.Arista;
 import com.viralsim.models.Nodo;
 import com.viralsim.services.NodoService;
+import com.viralsim.services.AristaService;
 
 @RestController
 @RequestMapping("/api/nodos")
 public class NodoController {
 
     private final NodoService nodoService;
+    private final AristaService aristaService;
 
-    public NodoController(NodoService nodoService) {
+    public NodoController(NodoService nodoService, AristaService aristaService) {
         this.nodoService = nodoService;
+        this.aristaService = aristaService;
     }
 
     @PostMapping
@@ -30,9 +35,9 @@ public class NodoController {
         return ResponseEntity.ok(nodoService.crearNodo(grafoId, nombre));
     }
 
-    @GetMapping("/grafo/{grafoId}")
-    public ResponseEntity<List<Nodo>> obtenerPorGrafo(@PathVariable int grafoId) {
-        return ResponseEntity.ok(nodoService.obtenerPorGrafo(grafoId));
+   @GetMapping("/grafo/{grafoId}")
+    public ResponseEntity<List<Arista>> obtenerPorGrafo(@PathVariable int grafoId) {
+        return ResponseEntity.ok(aristaService.obtenerPorGrafo(grafoId));
     }
 
     @GetMapping("/{id}")
@@ -47,9 +52,9 @@ public class NodoController {
      * @return El nodo actualizado
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Nodo> actualizarNodo(@PathVariable int id, @RequestBody Nodo nodoActualizado) {
-        return ResponseEntity.ok(nodoService.actualizarNodo(id, nodoActualizado));
-    }
+        public ResponseEntity<Nodo> actualizarNodo(@PathVariable int id, @RequestBody Nodo nodoActualizado) {
+            return ResponseEntity.ok(nodoService.actualizarNodo(id, nodoActualizado));
+        }
 
     /**
      * Obtiene los nodos de un grafo ordenados por centralidad de grado (top primero).
