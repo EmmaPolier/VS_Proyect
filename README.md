@@ -1,49 +1,75 @@
+database/         # Esquema SQL y datos iniciales
 # ViralSim
 
-Plataforma de simulación de propagación en redes que modela cómo la información, influencia o contenido viral se propaga a través de redes sociales.
+Propósito
+---------
 
-## Descripción General
+ViralSim es una aplicación para investigar y experimentar con la propagación de información, influencia o comportamientos en redes. Permite ejecutar simulaciones reproducibles sobre grafos, comparar modelos de propagación y calcular métricas relevantes para análisis académicos o de prototipado.
 
-ViralSim es una aplicación web que simula la propagación de información a través de redes utilizando tres modelos de propagación diferentes:
+Estructura del proyecto
+-----------------------
 
-- **Modelo Viral**: Cada nodo se propaga con su propia probabilidad
-- **Cascada Independiente**: Propagación basada en aristas con un único intento de activación
-- **Modelo de Umbral**: Adopción basada en presión social (basada en porcentaje)
-
-## Características
-
-- **Motor de Simulación**: Ejecución paso a paso de modelos de propagación en grafos de red
-- **Generación de Redes**: Generación de topología Watts-Strogatz para estructuras de red realistas
-- **Métricas en Tiempo Real**: Calcula centralidad de red, tasas de adopción y estadísticas de propagación
-- **Visualización Interactiva**: Interfaz web para visualización y control de grafos
-- **Almacenamiento Persistente**: Base de datos MySQL para guardar simulaciones y datos históricos
-
-## Estructura del Proyecto
+Raíz del repositorio:
 
 ```
-backend/          # Motor de simulación Java
-├── models/       # Definiciones de Grafo, Nodo, Arista, Estado
-├── propagation/  # Implementaciones de modelos de propagación
-├── engine/       # Orquestación de simulación
-├── metrics/      # Cálculo de métricas
-├── database/     # Capa de acceso a datos (DAOs)
-└── utils/        # Utilidades y generadores
-
-frontend/         # Interfaz web (HTML/JS/CSS)
-database/         # Esquema SQL y datos iniciales
+docker-compose.yml
+backend/                # Aplicación Java (Spring Boot)
+database/               # Scripts SQL de inicialización
+README.md
 ```
 
-## Stack Tecnológico
+Estructura principal del backend (`backend/src/main/java/com/viralsim`):
 
-- **Backend**: Java con Maven
-- **Frontend**: HTML, CSS, JavaScript
-- **Base de Datos**: MySQL
-- **Arquitectura**: Multicapa (Modelos → Propagación → Motor → Métricas → Base de Datos)
+```
+api/                    # Controladores de errores y excepciones globales
+controllers/            # Endpoints REST (ver lista abajo)
+dto/                    # Objetos de transferencia (responses/requests)
+engine/                 # Motor de simulación y orquestación de modelos
+metrics/                # Cálculo de métricas sobre simulaciones
+models/                 # Entidades: Grafo, Nodo, Arista, Simulación, Paso, etc.
+repositories/           # Repositorios JPA para persistencia
+services/               # Lógica de negocio y servicios
+utils/                  # Generadores y utilidades (por ejemplo Watts-Strogatz)
+resources/              # `application.properties`, `data.sql` de ejemplo
+```
 
-## Primeros Pasos
+Controladores relevantes (ubicados en `backend/src/main/java/com/viralsim/controllers`):
 
-1. Configura la conexión a la base de datos en el backend
-2. Ejecuta schema.sql para crear las tablas
-3. Construye el backend: `mvn clean install`
-4. Despliega el frontend en el servidor web
-5. Ejecuta simulaciones a través de la interfaz web
+- `SimulacionController` — endpoints para crear/ejecutar/comparar simulaciones
+- `NodoController` — CRUD y operaciones sobre nodos
+- `GrafoController` — CRUD y operaciones sobre grafos
+- `AristaController` — CRUD de aristas
+- `PasoSimulacionController` — consultar pasos de una simulación
+- `NodoSimulacionController` — estado de nodos dentro de una simulación
+- `ConfiguracionSimulacionController` — gestión de configuraciones
+
+Dónde están los modelos de propagación
+-------------------------------------
+
+Las implementaciones de los modelos (Viral, Cascada Independiente, Threshold) se encuentran en el paquete `engine` y son ejecutadas por `MotorSimulacion`. No existe un controlador REST específico para `ModeloPropagacion`; en su lugar los modelos se seleccionan por `modeloId` desde `SimulacionController`.
+
+Base de datos
+------------
+
+Los scripts de inicialización están en `database/init/schema.sql`. Revisar `backend/src/main/resources/application.properties` para la configuración de conexión.
+
+Cómo ejecutar (rápido)
+---------------------
+
+1. Ajusta la conexión a la base de datos en `backend/src/main/resources/application.properties`.
+2. Crea la base de datos y ejecuta `database/init/schema.sql`.
+3. Desde `backend/` construye la aplicación: `mvn clean package`.
+4. Ejecuta la app con: `java -jar target/backend-0.0.1-SNAPSHOT.jar` (o `mvn spring-boot:run`).
+
+Dónde mirar primero
+-------------------
+
+- `backend/src/main/java/com/viralsim/engine/MotorSimulacion.java` — orquesta la ejecución de modelos.
+- `backend/src/main/java/com/viralsim/controllers/SimulacionController.java` — endpoints para lanzar y comparar simulaciones.
+- `database/init/schema.sql` — esquema inicial de la base de datos.
+
+Contacto
+--------
+
+Para dudas sobre diseño o ejecución deja una issue o contacta al equipo en `EQUIPO.md`.
+
