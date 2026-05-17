@@ -13,21 +13,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.viralsim.models.Arista;
 import com.viralsim.models.Nodo;
 import com.viralsim.services.NodoService;
-import com.viralsim.services.AristaService;
 
 @RestController
 @RequestMapping("/api/nodos")
 public class NodoController {
 
     private final NodoService nodoService;
-    private final AristaService aristaService;
 
-    public NodoController(NodoService nodoService, AristaService aristaService) {
+    public NodoController(NodoService nodoService) {
         this.nodoService = nodoService;
-        this.aristaService = aristaService;
     }
 
     @PostMapping
@@ -35,9 +31,9 @@ public class NodoController {
         return ResponseEntity.ok(nodoService.crearNodo(grafoId, nombre));
     }
 
-   @GetMapping("/grafo/{grafoId}")
-    public ResponseEntity<List<Arista>> obtenerPorGrafo(@PathVariable int grafoId) {
-        return ResponseEntity.ok(aristaService.obtenerPorGrafo(grafoId));
+    @GetMapping("/grafo/{grafoId}")
+    public ResponseEntity<List<Nodo>> obtenerPorGrafo(@PathVariable int grafoId) {
+        return ResponseEntity.ok(nodoService.obtenerPorGrafo(grafoId));
     }
 
     @GetMapping("/{id}")
