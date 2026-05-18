@@ -106,6 +106,26 @@ function getEstadoBadge(estadoId) {
     }
 }
 
+function getEstadoNombre(estadoId) {
+    const estados = {
+        0: 'NO_INFORMADO',
+        1: 'INFORMADO_ACTIVO',
+        2: 'INFORMADO_PASIVO',
+        3: 'RESISTENTE'
+    };
+    return estados[estadoId] || 'DESCONOCIDO';
+}
+
+function getEstadoLabel(estadoId) {
+    const labels = {
+        0: '⚪',
+        1: '🔴',
+        2: '🟡',
+        3: '🟢'
+    };
+    return labels[estadoId] || '❓';
+}
+
 // ============================================
 // EDITAR NODO
 // ============================================

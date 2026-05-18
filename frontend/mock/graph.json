@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {"id": 1, "label": "1", "state": "S"},
+    {"id": 2, "label": "2", "state": "I"},
+    {"id": 3, "label": "3", "state": "S"},
+    {"id": 4, "label": "4", "state": "R"},
+    {"id": 5, "label": "5", "state": "S"},
+    {"id": 6, "label": "6", "state": "S"},
+    {"id": 7, "label": "7", "state": "S"},
+    {"id": 8, "label": "8", "state": "S"},
+    {"id": 9, "label": "9", "state": "S"},
+    {"id": 10, "label": "10", "state": "S"},
+    {"id": 11, "label": "11", "state": "S"},
+    {"id": 12, "label": "12", "state": "S"},
+    {"id": 13, "label": "13", "state": "S"},
+    {"id": 14, "label": "14", "state": "S"},
+    {"id": 15, "label": "15", "state": "S"},
+    {"id": 16, "label": "16", "state": "S"},
+    {"id": 17, "label": "17", "state": "S"},
+    {"id": 18, "label": "18", "state": "S"},
+    {"id": 19, "label": "19", "state": "S"},
+    {"id": 20, "label": "20", "state": "S"}
+  ],
+  "edges": [
+    {"from": 1, "to": 2}, {"from": 1, "to": 3}, {"from": 2, "to": 4}, {"from": 2, "to": 5},
+    {"from": 3, "to": 6}, {"from": 3, "to": 7}, {"from": 4, "to": 8}, {"from": 5, "to": 9},
+    {"from": 6, "to": 10}, {"from": 7, "to": 11}, {"from": 8, "to": 12}, {"from": 9, "to": 13},
+    {"from": 10, "to": 14}, {"from": 11, "to": 15}, {"from": 12, "to": 16}, {"from": 13, "to": 17},
+    {"from": 14, "to": 18}, {"from": 15, "to": 19}, {"from": 16, "to": 20}, {"from": 20, "to": 1}
+  ]
+}

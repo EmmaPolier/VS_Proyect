@@ -9,6 +9,7 @@ let redPropagacion = null;
 let enPausa = false;
 let chartPropagacion = null;
 let historicoEstados = [];
+let timeoutAutoAvanzar = null; // SALVAVIDAS: ID para cancelar timeout recursivo
 
 const divPropagacionGrafo = document.getElementById('propagacion-grafo');
 const pasoActualEl = document.getElementById('paso-actual');
@@ -27,13 +28,19 @@ async function cargarPropagacion() {
     try {
         const simulacionId = window.simulacionActualId;
         if (!simulacionId) {
-            divPropagacionGrafo.innerHTML = '<p>No hay simulación activa</p>';
+            divPropagacionGrafo.innerHTML = '<p>❌ No hay simulación activa</p>';
             return;
         }
 
         simulacionActual = await obtenerSimulacion(simulacionId);
-        if (!simulacionActual) {
-            divPropagacionGrafo.innerHTML = '<p>Error al cargar la simulación</p>';
+        if (!simulacionActual || !simulacionActual.id) {
+            divPropagacionGrafo.innerHTML = '<p>❌ Error al cargar la simulación del servidor</p>';
+            return;
+        }
+
+        // Validar que simulación tiene grafo ID
+        if (!simulacionActual.grafoId) {
+            divPropagacionGrafo.innerHTML = '<p>❌ Error: Simulación sin grafo asociado</p>';
             return;
         }
 
@@ -43,32 +50,48 @@ async function cargarPropagacion() {
             pasosSimulacion = [];
         }
 
-        // Cargar nodos
-        const nodosData = await obtenerNodosGrafo(simulacionActual.grafo.id);
-        const aristasData = await obtenerAristasGrafo(simulacionActual.grafo.id);
+        if (pasosSimulacion.length === 0) {
+            divPropagacionGrafo.innerHTML = '<p>⚠️ La simulación no produjo pasos. Verifica los parámetros.</p>';
+            return;
+        }
+
+        // Usar grafo de la simulación
+        const grafoId = simulacionActual.grafoId;
+
+        // Cargar nodos y aristas
+        const nodosData = await obtenerNodosGrafo(grafoId);
+        const aristasData = await obtenerAristasGrafo(grafoId);
+
+        // Validar datos
+        if (!Array.isArray(nodosData) || nodosData.length === 0) {
+            divPropagacionGrafo.innerHTML = '<p>❌ Error: No hay nodos en el grafo</p>';
+            return;
+        }
+        if (!Array.isArray(aristasData)) {
+            aristasData = [];
+        }
 
         pasoActual = 0;
         enPausa = false;
         historicoEstados = [];
 
-        // Actualizar información
-        propModelo.textContent = getModeloInfo(simulacionActual.modeloPropagacionId).nombre;
-        propSemilla.textContent = `ID: ${simulacionActual.nodoSemillaId}`;
+        // Actualizar información (usar modeloId de simulación)
+        const modelo = MODELOS[simulacionActual.modeloId];
+        propModelo.textContent = modelo ? modelo.nombre : 'Modelo desconocido';
+        propSemilla.textContent = `ID: ${simulacionActual.nodoSemillaId || 'Desconocido'}`;
 
         // Inicializar visualización
         visualizarPropagacion(nodosData, aristasData);
         actualizarMetricas();
 
         // Crear gráfica
-        if (pasosSimulacion.length > 0) {
-            crearGrafica();
-        }
+        crearGrafica();
 
         // Auto-avanzar
         autoAvanzar();
     } catch (error) {
         console.error('Error al cargar propagación:', error);
-        divPropagacionGrafo.innerHTML = '<p>Error al cargar la simulación</p>';
+        divPropagacionGrafo.innerHTML = `<p>❌ Error: ${error.message}</p>`;
     }
 }
 
@@ -260,6 +283,12 @@ function siguientePaso() {
 }
 
 function reiniciarSimulacion() {
+    // SALVAVIDAS: Limpiar timeout anterior
+    if (timeoutAutoAvanzar) {
+        clearTimeout(timeoutAutoAvanzar);
+        timeoutAutoAvanzar = null;
+    }
+
     pasoActual = 0;
     enPausa = false;
     historicoEstados = [];
@@ -270,12 +299,35 @@ function reiniciarSimulacion() {
 }
 
 function autoAvanzar() {
-    if (!enPausa && pasoActual < pasosSimulacion.length - 1) {
-        setTimeout(() => {
-            siguientePaso();
-            autoAvanzar();
-        }, 800); // Un paso cada 800ms
+    // SALVAVIDAS: Limpiar timeout anterior si existe
+    if (timeoutAutoAvanzar) {
+        clearTimeout(timeoutAutoAvanzar);
+        timeoutAutoAvanzar = null;
     }
+
+    // SALVAVIDAS: Validar que pasosSimulacion existe y tiene datos
+    if (!Array.isArray(pasosSimulacion) || pasosSimulacion.length === 0) {
+        console.warn('⚠️ autoAvanzar: No hay pasos de simulación');
+        return;
+    }
+
+    // SALVAVIDAS: Si ya llegamos al final, parar
+    if (pasoActual >= pasosSimulacion.length - 1) {
+        btnPausarSim.textContent = '✅ Finalizado';
+        enPausa = true;
+        return;
+    }
+
+    // Si está en pausa, no continuar
+    if (enPausa) {
+        return;
+    }
+
+    // Programar siguiente paso
+    timeoutAutoAvanzar = setTimeout(() => {
+        siguientePaso();
+        autoAvanzar(); // Recursión controlada
+    }, 800); // Un paso cada 800ms
 }
 
 btnSiguientePaso.addEventListener('click', siguientePaso);
@@ -283,6 +335,11 @@ btnReiniciarSim.addEventListener('click', reiniciarSimulacion);
 btnPausarSim.addEventListener('click', () => {
     enPausa = !enPausa;
     if (enPausa) {
+        // SALVAVIDAS: Limpiar timeout cuando se pausa
+        if (timeoutAutoAvanzar) {
+            clearTimeout(timeoutAutoAvanzar);
+            timeoutAutoAvanzar = null;
+        }
         btnPausarSim.textContent = '▶ Reanudar';
     } else {
         btnPausarSim.textContent = '⏸ Pausar';

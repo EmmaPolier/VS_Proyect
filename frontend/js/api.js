@@ -118,14 +118,33 @@ async function obtenerAristasGrafo(grafoId) {
 // SIMULACIONES
 // ============================================
 
-async function crearSimulacion(datos) {
+async function crearSimulacion(grafoId, modeloId, nodoSemillaId) {
+    // Validar parámetros
+    if (!grafoId || !modeloId || !nodoSemillaId) {
+        throw new Error('Parámetros inválidos: grafoId, modeloId y nodoSemillaId son requeridos');
+    }
+
     try {
-        const response = await fetch(`${API_BASE_URL}/simulaciones`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(datos)
+        const params = new URLSearchParams({
+            grafoId: grafoId,
+            modeloId: modeloId,
+            nodoSemillaId: nodoSemillaId
         });
-        return await response.json();
+        const response = await fetch(`${API_BASE_URL}/simulaciones?${params.toString()}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Error ${response.status}: ${errorText || 'Error desconocido al crear simulación'}`);
+        }
+        
+        const data = await response.json();
+        if (!data || !data.id) {
+            throw new Error('Respuesta inválida del servidor: sin ID de simulación');
+        }
+        return data;
     } catch (error) {
         console.error('Error al crear simulación:', error);
         throw error;
@@ -153,11 +172,25 @@ async function obtenerSimulacion(id) {
 }
 
 async function ejecutarSimulacion(id) {
+    if (!id) {
+        throw new Error('ID de simulación requerido');
+    }
+
     try {
         const response = await fetch(`${API_BASE_URL}/simulaciones/${id}/ejecutar`, {
             method: 'POST'
         });
-        return await response.json();
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Error ${response.status}: ${errorText || 'Error desconocido al ejecutar simulación'}`);
+        }
+        
+        const data = await response.json();
+        if (!data) {
+            throw new Error('Respuesta vacía del servidor');
+        }
+        return data;
     } catch (error) {
         console.error('Error al ejecutar simulación:', error);
         throw error;

@@ -132,8 +132,18 @@ sliderAlcance.addEventListener('input', (e) => {
 
 async function lanzarSimulacion() {
     // Validaciones
+    if (!grafoChisme || !grafoChisme.id) {
+        alert('❌ Error: No hay grafo cargado. Intenta recargar la página.');
+        return;
+    }
+
     if (!nodoSemillaSeleccionado) {
         alert('⚠️ Selecciona un nodo semilla haciendo clic en el grafo');
+        return;
+    }
+
+    if (!nodoSemillaSeleccionado.id) {
+        alert('❌ Error: Nodo semilla inválido. Intenta seleccionar otro.');
         return;
     }
 
@@ -151,17 +161,12 @@ async function lanzarSimulacion() {
         btnLanzarSimulacion.disabled = true;
         btnLanzarSimulacion.textContent = '⏳ Ejecutando...';
 
-        // Crear configuración
-        const config = {
-            grafoId: grafoChisme.id,
-            nodoSemillaId: nodoSemillaSeleccionado.id,
-            modeloPropagacionId: modeloSeleccionado,
-            mensaje: inputMensaje.value,
-            pasoMaximo: parseInt(sliderAlcance.value)
-        };
-
         // Crear simulación
-        const simulacion = await crearSimulacion(config);
+        const simulacion = await crearSimulacion(
+            grafoChisme.id,
+            modeloSeleccionado,
+            nodoSemillaSeleccionado.id
+        );
         
         // Ejecutar simulación
         await ejecutarSimulacion(simulacion.id);

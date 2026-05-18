@@ -13,6 +13,12 @@ tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
         const tabName = btn.getAttribute('data-tab');
         
+        // SALVAVIDAS: Limpiar timers de simulación anterior antes de cambiar tab
+        if (typeof timeoutAutoAvanzar !== 'undefined' && timeoutAutoAvanzar) {
+            clearTimeout(timeoutAutoAvanzar);
+            timeoutAutoAvanzar = null;
+        }
+        
         // Desactivar todas las tabs
         tabContents.forEach(tab => tab.classList.remove('active'));
         tabBtns.forEach(b => b.classList.remove('active'));
@@ -41,7 +47,7 @@ async function actualizarEstadisticas() {
         // Grafos
         const grafos = await obtenerGrafos();
         document.getElementById('stat-grafo').textContent = grafos.length > 0 
-            ? `${grafos[0].nombre} (${grafos[0].id})`
+            ? `ID: ${grafos[0].id} (${grafos[0].totalNodos} nodos)`
             : 'Ninguna';
 
         // Nodos
@@ -70,20 +76,19 @@ const btnCargarExistente = document.getElementById('btn-cargar-existente');
 btnGenerarRed.addEventListener('click', async () => {
     try {
         btnGenerarRed.disabled = true;
-        btnGenerarRed.textContent = '⏳ Generando red...';
+        btnGenerarRed.textContent = '⏳ Generando red (puede tomar ~10 segundos)...';
 
-        // Crear grafo
-        const grafo = await crearGrafo('Red Watts-Strogatz 250 nodos');
+        // Crear grafo Watts-Strogatz
+        const response = await fetch(`${API_BASE_URL}/grafos/crear`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const grafo = await response.json();
         
-        // En un proyecto real, aquí se llamaría al endpoint de generación
-        // Por ahora simularemos que se generó correctamente
-        
-        setTimeout(async () => {
-            await actualizarEstadisticas();
-            btnGenerarRed.disabled = false;
-            btnGenerarRed.textContent = '⚡ Generar Red Watts-Strogatz (250 nodos)';
-            alert('✅ Red generada exitosamente. Ahora puedes editar nodos o lanzar simulaciones.');
-        }, 2000);
+        await actualizarEstadisticas();
+        btnGenerarRed.disabled = false;
+        btnGenerarRed.textContent = '⚡ Generar Red Watts-Strogatz (250 nodos)';
+        alert('✅ Red generada exitosamente. Ahora puedes editar nodos o lanzar simulaciones.');
     } catch (error) {
         console.error('Error al generar red:', error);
         alert('❌ Error al generar la red: ' + error.message);
@@ -101,7 +106,7 @@ btnCargarExistente.addEventListener('click', async () => {
         }
         
         await actualizarEstadisticas();
-        alert(`✅ Red cargada: ${grafos[0].nombre}`);
+        alert(`✅ Red cargada: ID ${grafos[0].id} (${grafos[0].totalNodos} nodos)`);
     } catch (error) {
         console.error('Error al cargar red:', error);
         alert('❌ Error al cargar la red');
@@ -120,5 +125,5 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('[data-tab="inicio"]').click();
 });
 
-// Actualizar estadísticas cada 5 segundos
-setInterval(actualizarEstadisticas, 5000);
+// SALVAVIDAS: Intervalo con ID para poder cancelarlo después
+let intervalEstadisticas = setInterval(actualizarEstadisticas, 5000);
