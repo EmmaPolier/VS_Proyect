@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ViralSim</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- Aplicación ViralSim: contenedor principal de la interfaz -->
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo-ring"><div class="logo-dot"></div></div>
+        <div>
+          <div class="brand-name">ViralSim</div>
+          <div class="brand-subtitle">Simulación de propagación</div>
+        </div>
+      </div>
+
+      <div class="top-stats">Red: <strong>250 nodos</strong></div>
+    </header>
+    <!-- Panel principal con estadísticas de red y controles de visualización -->
+
+    <!-- Área principal del dashboard: gráfico de red y panel de métricas -->
+    <main class="dashboard-grid">
+      <section class="graph-panel">
+        <div class="graph-stage">
+          <svg id="graph" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="graph-badge">250 nodos</div>
+          <div class="infobox">Nodo origen con halo rojo pulsante</div>
+        </div>
+      </section>
+
+      <!-- Panel lateral con métricas y rankings de nodos -->
+      <aside class="side-panel">
+        <div class="panel-card panel-metrics">
+          <div class="card-title">Métricas en tiempo real</div>
+          <div class="metric-row"><span>Alcance</span><strong id="metric-reach">0%</strong></div>
+          <div class="metric-row"><span>Paso actual</span><strong id="metric-step">0</strong></div>
+          <div class="metric-row"><span>Velocidad</span><strong id="metric-speed">x1</strong></div>
+          <div class="metric-row"><span>Total informados</span><strong id="metric-informed">0</strong></div>
+          <div class="metric-row"><span>Estado de la red</span><strong id="metric-status">Estable</strong></div>
+          <div class="progress-block"><label>Informados activos</label><div class="progress"><span id="bar-active"></span></div></div>
+          <div class="progress-block"><label>Informados pasivos</label><div class="progress"><span id="bar-passive"></span></div></div>
+          <div class="progress-block"><label>Resistentes</label><div class="progress"><span id="bar-resistant"></span></div></div>
+          <div class="progress-block"><label>No informados</label><div class="progress"><span id="bar-uninformed"></span></div></div>
+        </div>
+
+        <div class="panel-card panel-ranking">
+          <div class="card-title">Nodos más influyentes</div>
+          <div class="rank-item"><span>Betweenness</span><strong>42</strong></div>
+          <div class="rank-bar"><span style="width: 76%;"></span></div>
+          <div class="rank-item"><span>Grado de conexiones</span><strong>61</strong></div>
+          <div class="rank-bar"><span style="width: 92%;"></span></div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Controles y edición de nodo, junto a la simulación paso a paso -->
+    <section class="detail-grid">
+      <!-- Editor de nodo seleccionado y controles de simulación -->
+      <div class="node-editor panel-card">
+        <div class="card-title">Edición de nodo</div>
+        <div class="form-row"><label>Nombre</label><input id="node-name" type="text" value="Nodo 1" /></div>
+        <div class="form-row"><label>ID</label><input id="node-id" type="text" value="1" disabled /></div>
+        <div class="form-row"><label>Conexiones</label><input id="node-degree" type="text" value="0" disabled /></div>
+        <div class="form-row slider-row"><label>Probabilidad propagación</label><input id="propagation-prob" type="range" min="0" max="100" value="60" /><span id="propagation-prob-value">60%</span></div>
+        <div class="form-row slider-row"><label>Resistencia</label><input id="resistance" type="range" min="0" max="100" value="24" /><span id="resistance-value">24%</span></div>
+        <div class="form-row slider-row"><label>Umbral social</label><input id="social-threshold" type="range" min="0" max="100" value="40" /><span id="social-threshold-value">40%</span></div>
+        <div class="form-row"><label>Estado inicial</label><select id="initial-state"><option value="uninformed">No informado</option><option value="active">Activo</option><option value="passive">Pasivo</option><option value="resistant">Resistente</option></select></div>
+        <div class="editor-actions"><button id="save-node" type="button">Guardar nodo</button><button id="discard-node" type="button" class="secondary">Descartar cambios</button></div>
+      </div>
+
+      <div class="sim-control panel-card">
+        <div class="card-title">Simulación</div>
+        <div class="seed-selection">
+          <label for="seed-input">Nodo semilla</label>
+          <div class="seed-controls">
+            <input id="seed-input" type="number" min="1" max="250" value="1" />
+            <button id="launch-button" type="button">Lanzar</button>
+          </div>
+        </div>
+        <div class="control-row-bottom">
+          <button id="pause-btn">Pausar</button>
+          <button id="reset-btn">Reiniciar</button>
+          <button id="step-btn">Paso a paso</button>
+        </div>
+        <div class="speed-group"><span>Velocidad</span><button class="speed-btn active" data-speed="1">x1</button><button class="speed-btn" data-speed="2">x2</button><button class="speed-btn" data-speed="3">x3</button></div>
+        <div class="timeline"><span>Paso actual</span><strong id="bottom-step">0</strong><span>Total pasos</span><strong id="bottom-total">10</strong></div>
+        <div class="chart-card">
+          <div class="chart-title">Curva de alcance por modelo</div>
+          <div class="chart-legend"><span class="legend-dot red"></span>Viral <span class="legend-dot blue"></span>Cascada <span class="legend-dot green"></span>Threshold</div>
+          <svg id="line-chart" viewBox="0 0 520 220" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Carga de bibliotecas y lógica: D3 para visualización, cliente REST para API, y comportamiento de la app -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="js/api-service.js"></script>
+  <script src="js/graph-data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
