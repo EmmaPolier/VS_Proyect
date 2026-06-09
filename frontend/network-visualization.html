@@ -81,6 +81,23 @@
             <button id="launch-button" type="button">Lanzar</button>
           </div>
         </div>
+        <div class="model-selection" style="margin-top: 15px;">
+          <label>Modelo de propagación</label>
+          <div class="model-buttons">
+            <button id="model-viral" class="model-btn active" data-model="viral">
+              <span class="dot red"></span>Viral
+            </button>
+            <button id="model-cascada" class="model-btn" data-model="cascada">
+              <span class="dot blue"></span>Cascada
+            </button>
+            <button id="model-threshold" class="model-btn" data-model="threshold">
+              <span class="dot green"></span>Threshold
+            </button>
+          </div>
+        </div>
+        <div class="seed-controls" style="margin-top: 15px;">
+          <button id="create-graph-button" type="button">Crear nuevo grafo</button>
+        </div>
         <div class="control-row-bottom">
           <button id="pause-btn">Pausar</button>
           <button id="reset-btn">Reiniciar</button>
@@ -90,7 +107,20 @@
         <div class="timeline"><span>Paso actual</span><strong id="bottom-step">0</strong><span>Total pasos</span><strong id="bottom-total">10</strong></div>
         <div class="chart-card">
           <div class="chart-title">Curva de alcance por modelo</div>
-          <div class="chart-legend"><span class="legend-dot red"></span>Viral <span class="legend-dot blue"></span>Cascada <span class="legend-dot green"></span>Threshold</div>
+          <div class="chart-legend">
+            <label class="legend-item">
+              <input type="checkbox" class="model-chart-toggle" data-model="viral" checked />
+              <span class="legend-dot red"></span>Viral
+            </label>
+            <label class="legend-item">
+              <input type="checkbox" class="model-chart-toggle" data-model="cascade" checked />
+              <span class="legend-dot blue"></span>Cascada
+            </label>
+            <label class="legend-item">
+              <input type="checkbox" class="model-chart-toggle" data-model="threshold" checked />
+              <span class="legend-dot green"></span>Threshold
+            </label>
+          </div>
           <svg id="line-chart" viewBox="0 0 520 220" preserveAspectRatio="none"></svg>
         </div>
       </div>

@@ -403,6 +403,26 @@ button, select, input {
   margin-bottom: 10px;
 }
 
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.2s ease;
+}
+
+.legend-item:hover {
+  opacity: 0.8;
+}
+
+.legend-item input[type="checkbox"] {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  accent-color: #ff4d4d;
+}
+
 .legend-dot {
   width: 10px;
   height: 10px;
@@ -645,6 +665,7 @@ td {
   fill: none;
   stroke-width: 2.4;
   stroke-linecap: round;
+  transition: opacity 0.3s ease;
 }
 
 .line-path.viral { stroke: #ff4d4d; }
@@ -693,4 +714,74 @@ td {
     transform: translateX(400px);
     opacity: 0;
   }
+}
+
+/* Estilos para los botones de selección de modelo */
+.model-selection {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 15px;
+  padding-bottom: 10px;
+}
+
+.model-selection label {
+  display: block;
+  font-size: 13px;
+  color: rgba(207,207,207,0.82);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.model-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.model-btn {
+  flex: 1;
+  min-width: 90px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 2px solid rgba(255,255,255,0.1);
+  color: rgba(207,207,207,0.82);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.model-btn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.model-btn.active {
+  background: rgba(255,77,77,0.2);
+  border-color: rgba(255,77,77,0.5);
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(255,77,77,0.2);
+}
+
+.model-btn .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.model-btn .dot.red {
+  background: #ff4d4d;
+}
+
+.model-btn .dot.blue {
+  background: #4db8ff;
+}
+
+.model-btn .dot.green {
+  background: #4dff77;
 }

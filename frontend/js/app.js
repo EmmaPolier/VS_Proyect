@@ -6,6 +6,8 @@
 
 // Variables globales iniciales
 let grafoId = null;
+let modeloSeleccionado = 'viral'; // Modelo por defecto
+let modelosVisiblesChart = { viral: true, cascade: true, threshold: true }; // Modelos visibles en gráfica
 let nodes = [];
 let links = [];
 let adjacency = [];
@@ -21,6 +23,8 @@ async function initializeApp() {
     seedInput = document.getElementById('seed-input');
     launchButton = document.getElementById('launch-button');
     btnLaunchTop = document.getElementById('btn-launch');
+    createGraphButton = document.getElementById('create-graph-button');
+    modelButtons = document.querySelectorAll('.model-btn');
     pauseButton = document.getElementById('pause-btn');
     resetButton = document.getElementById('reset-btn');
     stepButton = document.getElementById('step-btn');
@@ -191,7 +195,7 @@ defs.append('filter')
 let link, node;
 
 /* Referencias a elementos del DOM para controlar la UI de la simulación */
-let seedInput, launchButton, btnLaunchTop, pauseButton, resetButton, stepButton, speedButtons;
+let seedInput, launchButton, btnLaunchTop, createGraphButton, modelButtons, pauseButton, resetButton, stepButton, speedButtons;
 let saveNode, discardNode, nodeName, nodeId, nodeDegree, propagationProb, propagationProbValue;
 let resistance, resistanceValue, socialThreshold, socialThresholdValue, initialState;
 let metricReach, metricStep, metricSpeed, metricInformed, metricStatus;
@@ -227,6 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupEventListeners() {
   if (launchButton) launchButton.addEventListener('click', () => triggerLaunch());
   if (btnLaunchTop) btnLaunchTop.addEventListener('click', () => triggerLaunch());
+  if (createGraphButton) createGraphButton.addEventListener('click', createNewGraph);
   if (pauseButton) pauseButton.addEventListener('click', togglePause);
   if (resetButton) resetButton.addEventListener('click', resetSimulation);
   if (stepButton) stepButton.addEventListener('click', stepSimulation);
@@ -238,6 +243,16 @@ function setupEventListeners() {
       simulation.speed = Number(button.dataset.speed);
       if (metricSpeed) metricSpeed.textContent = `x${simulation.speed}`;
       if (simulation.active) startTimer();
+    });
+  });
+
+  // Event listeners para botones de selección de modelo
+  modelButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      modelButtons.forEach(btn => btn.classList.remove('active'));
+      button.classList.add('active');
+      modeloSeleccionado = button.dataset.model;
+      console.log('Modelo seleccionado:', modeloSeleccionado);
     });
   });
 
@@ -394,6 +409,17 @@ function setupEventListeners() {
   };
   exportMetricasButton.onclick = () => exportMetricsAsCSV();
   document.body.appendChild(exportMetricasButton);
+
+  // Event listeners para los checkboxes de selección de modelos en la gráfica
+  const modelChartToggles = document.querySelectorAll('.model-chart-toggle');
+  modelChartToggles.forEach(toggle => {
+    toggle.addEventListener('change', (e) => {
+      const model = e.target.dataset.model;
+      modelosVisiblesChart[model] = e.target.checked;
+      updateChart();
+      console.log(`Modelo ${model} ${e.target.checked ? 'mostrado' : 'ocultado'}`);
+    });
+  });
 }
 
 /* Conexión de eventos de usuario a las funciones de control de la simulación */
@@ -967,16 +993,55 @@ async function triggerLaunch() {
   updateMetrics();
 
   try {
-    // Llamar a la API para ejecutar la simulación
-    console.log('Ejecutando simulación en el backend...');
-    // TODO: Cuando SimulacionController esté completo, usar:
-    // const resultado = await APIService.ejecutarSimulacion(simulacionId);
+    // Crear y ejecutar simulación con el modelo seleccionado
+    console.log(`Ejecutando simulación con modelo: ${modeloSeleccionado}`);
     
-    // Por ahora, ejecutar localmente para demostración
+    const configuracion = {
+      modelo: modeloSeleccionado,
+      nodoSemillaId: seedNode.id,
+      probabilidad: seedNode.propagationProb,
+      resistencia: seedNode.resistance,
+      umbral: seedNode.threshold
+    };
+
+    // TODO: Cuando SimulacionController esté completo, usar:
+    // const simulacion = await APIService.crearSimulacion(grafoId, seedNode.id, configuracion);
+    // const resultado = await APIService.ejecutarSimulacion(simulacion.id);
+    
+    // Por ahora, ejecutar localmente con el modelo seleccionado
+    console.log('Configuración de simulación:', configuracion);
     stepSimulation();
     startTimer();
   } catch (error) {
     console.error('Error ejecutando simulación:', error);
+  }
+}
+
+/**
+ * Crea un nuevo grafo en el backend y recarga la página
+ */
+async function createNewGraph() {
+  try {
+    if (createGraphButton) {
+      createGraphButton.disabled = true;
+      createGraphButton.textContent = 'Creando...';
+    }
+    
+    console.log('Creando nuevo grafo...');
+    const nuevoGrafo = await APIService.crearGrafo();
+    
+    console.log('Grafo creado exitosamente:', nuevoGrafo);
+    alert(`✓ Grafo creado exitosamente con ${nuevoGrafo.nodos ? nuevoGrafo.nodos.length : 'múltiples'} nodos`);
+    
+    // Recargar la página para mostrar el nuevo grafo
+    window.location.reload();
+  } catch (error) {
+    console.error('Error creando grafo:', error);
+    alert('Error creando grafo. Revisa la consola para más detalles.');
+    if (createGraphButton) {
+      createGraphButton.disabled = false;
+      createGraphButton.textContent = 'Crear nuevo grafo';
+    }
   }
 }
 
@@ -1036,9 +1101,21 @@ function updateChart() {
     .y(d => yScale(d))
     .curve(d3.curveMonotoneX);
 
-  chartSvg.select('.line-path.viral').datum(simulation.series.viral).attr('d', line);
-  chartSvg.select('.line-path.cascade').datum(simulation.series.cascade).attr('d', line);
-  chartSvg.select('.line-path.threshold').datum(simulation.series.threshold).attr('d', line);
+  // Actualizar líneas con visibilidad controlada por checkboxes
+  chartSvg.select('.line-path.viral')
+    .datum(simulation.series.viral)
+    .attr('d', line)
+    .style('display', modelosVisiblesChart.viral ? 'block' : 'none');
+  
+  chartSvg.select('.line-path.cascade')
+    .datum(simulation.series.cascade)
+    .attr('d', line)
+    .style('display', modelosVisiblesChart.cascade ? 'block' : 'none');
+  
+  chartSvg.select('.line-path.threshold')
+    .datum(simulation.series.threshold)
+    .attr('d', line)
+    .style('display', modelosVisiblesChart.threshold ? 'block' : 'none');
 }
 
 /* Ejecuta un paso de simulación, actualiza estados y recalcula la gráfica */
