@@ -13,12 +13,13 @@ import com.viralsim.repositories.NodoRepository;
 
 @Service
 public class NodoService {
-    
+
     private final NodoRepository nodoRepository;
     private final GrafoRepository grafoRepository;
     private final EstadoCatalogoRepository estadoRepository;
 
-    public NodoService(NodoRepository nodoRepository, GrafoRepository grafoRepository, EstadoCatalogoRepository estadoRepository) {
+    public NodoService(NodoRepository nodoRepository, GrafoRepository grafoRepository,
+            EstadoCatalogoRepository estadoRepository) {
         this.nodoRepository = nodoRepository;
         this.grafoRepository = grafoRepository;
         this.estadoRepository = estadoRepository;
@@ -29,7 +30,7 @@ public class NodoService {
                 .orElseThrow(() -> new RuntimeException("Grafo no encontrado: " + grafoId));
         EstadoCatalogo estadoInicial = estadoRepository.findById(0)
                 .orElseThrow(() -> new RuntimeException("Estado NO_INFORMADO no esncontrado"));
-        
+
         Nodo nodo = new Nodo();
         nodo.setGrafo(grafo);
         nodo.setNombre(nombre);
@@ -38,9 +39,7 @@ public class NodoService {
     }
 
     public List<Nodo> obtenerPorGrafo(int grafoId) {
-        return nodoRepository.findAll().stream()
-                .filter(n -> n.getGrafo().getId().equals(grafoId))
-                .toList();
+        return nodoRepository.findByGrafo_Id(grafoId);
     }
 
     public Nodo obtenerPorId(int id) {
@@ -50,13 +49,14 @@ public class NodoService {
 
     /**
      * Actualiza un nodo existente con los nuevos valores.
-     * @param id ID del nodo
+     * 
+     * @param id              ID del nodo
      * @param nodoActualizado Objeto con los campos a actualizar
      * @return El nodo actualizado
      */
     public Nodo actualizarNodo(int id, Nodo nodoActualizado) {
         Nodo nodo = obtenerPorId(id);
-        
+
         if (nodoActualizado.getNombre() != null) {
             nodo.setNombre(nodoActualizado.getNombre());
         }
@@ -69,12 +69,14 @@ public class NodoService {
         if (nodoActualizado.getUmbral() != null) {
             nodo.setUmbral(nodoActualizado.getUmbral());
         }
-        
+
         return nodoRepository.save(nodo);
     }
 
     /**
-     * Obtiene los nodos de un grafo ordenados por centralidad de grado (descendente).
+     * Obtiene los nodos de un grafo ordenados por centralidad de grado
+     * (descendente).
+     * 
      * @param grafoId ID del grafo
      * @return Lista de nodos ordenada por centralidadGrado descendente
      */
@@ -85,7 +87,9 @@ public class NodoService {
     }
 
     /**
-     * Obtiene los nodos de un grafo ordenados por betweenness centrality (descendente).
+     * Obtiene los nodos de un grafo ordenados por betweenness centrality
+     * (descendente).
+     * 
      * @param grafoId ID del grafo
      * @return Lista de nodos ordenada por betweenness descendente
      */

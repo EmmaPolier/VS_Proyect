@@ -209,17 +209,15 @@ class APIService {
 
   /**
    * Crea una nueva simulación
+   * @param {number} grafoId - ID del grafo
+   * @param {number} nodoSemillaId - ID del nodo semilla
+   * @param {number} modeloId - ID del modelo (1=viral, 2=cascade, 3=threshold)
    */
-  static async crearSimulacion(grafoId, nodoSemillaId, configuracion) {
+  static async crearSimulacion(grafoId, nodoSemillaId, modeloId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/simulaciones`, {
+      const response = await fetch(`${API_BASE_URL}/simulaciones?grafoId=${grafoId}&nodoSemillaId=${nodoSemillaId}&modeloId=${modeloId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          grafoId,
-          nodoSemillaId,
-          ...configuracion
-        })
+        headers: { 'Content-Type': 'application/json' }
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();

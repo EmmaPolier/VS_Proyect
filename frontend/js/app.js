@@ -7,7 +7,6 @@
 // Variables globales iniciales
 let grafoId = null;
 let modeloSeleccionado = 'viral'; // Modelo por defecto
-let modelosVisiblesChart = { viral: true, cascade: true, threshold: true }; // Modelos visibles en gráfica
 let nodes = [];
 let links = [];
 let adjacency = [];
@@ -24,6 +23,8 @@ async function initializeApp() {
     launchButton = document.getElementById('launch-button');
     btnLaunchTop = document.getElementById('btn-launch');
     createGraphButton = document.getElementById('create-graph-button');
+    grafoSelect = document.getElementById('grafo-select');
+    loadGraphButton = document.getElementById('load-graph-button');
     modelButtons = document.querySelectorAll('.model-btn');
     pauseButton = document.getElementById('pause-btn');
     resetButton = document.getElementById('reset-btn');
@@ -54,106 +55,8 @@ async function initializeApp() {
     bottomTotal = document.getElementById('bottom-total');
     chartSvg = d3.select('#line-chart');
 
-    // Cargar o crear un grafo
-    const grafos = await APIService.obtenerGrafos();
-    
-    if (grafos.length === 0) {
-      // Si no hay grafos, crear uno nuevo
-      console.log('No hay grafos, creando uno nuevo...');
-      const nuevoGrafo = await APIService.crearGrafo();
-      grafoId = nuevoGrafo.id;
-    } else {
-      // Usar el primer grafo disponible
-      grafoId = grafos[0].id;
-    }
-
-    console.log('Usando grafo ID:', grafoId);
-
-    // Cargar nodos y aristas del grafo
-    const nodosAPI = await APIService.obtenerNodosPorGrafo(grafoId);
-    const aristasAPI = await APIService.obtenerAristasPorGrafo(grafoId);
-
-    // Calcular métricas del grafo (betweenness centrality, grado)
-    await APIService.calcularMetricas(grafoId);
-
-    // Transformar datos de API a formato compatible con D3
-    nodes = nodosAPI.map(nodo => ({
-      id: nodo.id,
-      x: width / 2,
-      y: height / 2,
-      state: 'uninformed',
-      propagationProb: nodo.probabilidad || 60,
-      resistance: nodo.resistencia || 24,
-      threshold: nodo.umbral || 40,
-      name: nodo.nombre || `Nodo ${nodo.id}`,
-      degree: 0,
-      isSource: false,
-      betweenness: nodo.betweenness || 0,
-      centralidadGrado: nodo.centralidadGrado || 0
-    }));
-
-    links = aristasAPI.map(arista => ({
-      source: nodes.find(n => n.id === arista.nodoOrigen.id),
-      target: nodes.find(n => n.id === arista.nodoDestino.id)
-    }));
-
-    // Construir matriz de adyacencia
-    adjacency = Array.from({ length: nodes.length }, () => []);
-    links.forEach(link => {
-      link.source.degree += 1;
-      link.target.degree += 1;
-      const sourceIdx = nodes.indexOf(link.source);
-      const targetIdx = nodes.indexOf(link.target);
-      adjacency[sourceIdx].push(targetIdx);
-      adjacency[targetIdx].push(sourceIdx);
-    });
-
-    // Posicionar nodos en CÍRCULO PERFECTO (Watts-Strogatz ring layout)
-    const radius = 850; // Radio aún más grande para máximo espaciado visual
-    const centerX = width / 2;
-    const centerY = height / 2;
-    nodes.forEach((node, i) => {
-      const angle = (i / nodes.length) * 2 * Math.PI;
-      node.x = centerX + radius * Math.cos(angle);
-      node.y = centerY + radius * Math.sin(angle);
-      // Fijar posición radial para que no se escape del círculo
-      node.fx = node.x;
-      node.fy = node.y;
-    });
-
-    // Crear D3 Force Simulation MÁS DÉBIL
-    // Los nodos están FIJOS en el círculo, las fuerzas solo ajustan ligeramente
-    forceSimulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(links)
-        .id(d => d.id)
-        .distance(150)  // Espaciado aún más grande entre nodos
-        .strength(0.01))  // MÁS DÉBIL (era 0.1)
-      .force('radial', d3.forceRadial(radius)
-        .strength(0.25))  // Más fuerte para mantener el espaciado
-      .force('center', d3.forceCenter(centerX, centerY))
-      .alphaDecay(0.1)
-      .velocityDecay(0.5);
-
-    // Tick rápido para ajustes mínimos
-    forceSimulation.tick(50);
-    
-    // IMPORTANTE: Desfijar los nodos para que puedan moverse durante la simulación
-    nodes.forEach(node => {
-      node.fx = null;
-      node.fy = null;
-    });
-    
-    forceSimulation.stop();
-
-    // Actualizar UI con información del grafo
-    document.querySelector('.top-stats').innerHTML = `Red: <strong>${nodes.length} nodos</strong>`;
-    document.querySelector('.graph-badge').textContent = `${nodes.length} nodos`;
-
-    // Inicializar visualización
-    renderGraph();
-    selectNode(nodes[0]);
-    updateMetrics();
-    initializeChart();
+    // Cargar lista de grafos disponibles
+    await cargarListaGrafos();
 
     // PASO 4: Cargar historial de simulaciones desde localStorage
     loadSimulationHistory();
@@ -161,7 +64,7 @@ async function initializeApp() {
     // Conectar eventos de usuario
     setupEventListeners();
 
-    console.log('Aplicación inicializada:', { grafoId, nodos: nodes.length, aristas: links.length });
+    console.log('Aplicación inicializada. Esperando que el usuario seleccione un grafo.');
   } catch (error) {
     console.error('Error inicializando aplicación:', error);
     alert('Error cargando datos del backend. Revisa la consola.');
@@ -200,6 +103,7 @@ let saveNode, discardNode, nodeName, nodeId, nodeDegree, propagationProb, propag
 let resistance, resistanceValue, socialThreshold, socialThresholdValue, initialState;
 let metricReach, metricStep, metricSpeed, metricInformed, metricStatus;
 let barActive, barPassive, barResistant, barUninformed, bottomStep, bottomTotal, chartSvg;
+let grafoSelect, loadGraphButton;
 
 /* Configuración de la gráfica que muestra la evolución de la simulación */
 const chartConfig = {
@@ -232,6 +136,14 @@ function setupEventListeners() {
   if (launchButton) launchButton.addEventListener('click', () => triggerLaunch());
   if (btnLaunchTop) btnLaunchTop.addEventListener('click', () => triggerLaunch());
   if (createGraphButton) createGraphButton.addEventListener('click', createNewGraph);
+  if (loadGraphButton) loadGraphButton.addEventListener('click', () => {
+    const grafoIdSeleccionado = grafoSelect.value;
+    if (grafoIdSeleccionado) {
+      cargarGrafo(parseInt(grafoIdSeleccionado));
+    } else {
+      alert('Por favor selecciona un grafo');
+    }
+  });
   if (pauseButton) pauseButton.addEventListener('click', togglePause);
   if (resetButton) resetButton.addEventListener('click', resetSimulation);
   if (stepButton) stepButton.addEventListener('click', stepSimulation);
@@ -253,6 +165,9 @@ function setupEventListeners() {
       button.classList.add('active');
       modeloSeleccionado = button.dataset.model;
       console.log('Modelo seleccionado:', modeloSeleccionado);
+      
+      // Reiniciar simulación cuando cambia el modelo
+      resetSimulation();
     });
   });
 
@@ -410,16 +325,7 @@ function setupEventListeners() {
   exportMetricasButton.onclick = () => exportMetricsAsCSV();
   document.body.appendChild(exportMetricasButton);
 
-  // Event listeners para los checkboxes de selección de modelos en la gráfica
-  const modelChartToggles = document.querySelectorAll('.model-chart-toggle');
-  modelChartToggles.forEach(toggle => {
-    toggle.addEventListener('change', (e) => {
-      const model = e.target.dataset.model;
-      modelosVisiblesChart[model] = e.target.checked;
-      updateChart();
-      console.log(`Modelo ${model} ${e.target.checked ? 'mostrado' : 'ocultado'}`);
-    });
-  });
+  // Nota: Los checkboxes de modelo en la gráfica ya no se usan porque solo mostramos el modelo seleccionado
 }
 
 /* Conexión de eventos de usuario a las funciones de control de la simulación */
@@ -603,13 +509,24 @@ function showSaveNotification(message, type = 'success') {
 }
 
 function selectNode(nodeData) {
+  // Validar que nodeData existe
+  if (!nodeData) {
+    console.warn('selectNode: nodeData es undefined');
+    return;
+  }
+
   // PASO 3: Guardar automáticamente el nodo anterior antes de cambiar
   if (selectedNode && selectedNode.id !== nodeData.id) {
     saveCurrentNode();
   }
   
   selectedNode = nodeData;
-  node.classed('selected', d => d === nodeData);
+  
+  // Solo actualizar visualización si node (D3 selection) está inicializado
+  if (node && node.classed) {
+    node.classed('selected', d => d === nodeData);
+  }
+  
   nodeName.value = nodeData.name;
   nodeId.value = nodeData.id;
   nodeDegree.value = nodeData.degree;
@@ -643,6 +560,7 @@ function saveSimulationToHistory() {
   const simulationRecord = {
     id: Date.now(), // Timestamp único
     date: new Date().toLocaleString('es-ES'),
+    modelo: modeloSeleccionado,
     seedNodeId: seedNode.id,
     seedNodeName: seedNode.name,
     totalSteps: simulation.totalSteps,
@@ -653,9 +571,7 @@ function saveSimulationToHistory() {
     resistant: counts.resistant,
     uninformed: counts.uninformed,
     seriesData: {
-      viral: simulation.series.viral,
-      cascade: simulation.series.cascade,
-      threshold: simulation.series.threshold
+      [modeloSeleccionado]: simulation.series[modeloSeleccionado] || []
     }
   };
   
@@ -669,7 +585,7 @@ function saveSimulationToHistory() {
     console.error('Error guardando en localStorage:', error);
   }
   
-  showSaveNotification(`📊 Simulación guardada (#${simulationHistory.length})`);
+  showSaveNotification(`📊 Simulación ${modeloSeleccionado} guardada (#${simulationHistory.length})`);
 }
 
 /* Carga el historial de simulaciones desde localStorage */
@@ -986,35 +902,80 @@ async function triggerLaunch() {
   }
 
   resetSimulation();
+  
+  try {
+    // Mapear modelo seleccionado a ID numérico para el backend
+    const modelMap = { viral: 1, cascade: 2, threshold: 3 };
+    const modeloId = modelMap[modeloSeleccionado];
+    
+    console.log(`Ejecutando simulación con modelo: ${modeloSeleccionado} (ID: ${modeloId})`);
+    
+    // PASO 1: Crear simulación en el backend
+    const simulacion = await APIService.crearSimulacion(grafoId, seedNode.id, modeloId);
+    console.log('Simulación creada:', simulacion);
+    
+    // PASO 2: Ejecutar simulación
+    const resultado = await APIService.ejecutarSimulacion(simulacion.id);
+    console.log('Simulación ejecutada:', resultado);
+    
+    // PASO 3: Obtener pasos de la simulación desde la BD
+    const pasos = await APIService.obtenerPasosSimulacion(simulacion.id);
+    console.log('Pasos obtenidos:', pasos);
+    
+    // PASO 4: Obtener métricas de la simulación desde la BD
+    const metricas = await APIService.obtenerMetricasSimulacion(simulacion.id);
+    console.log('Métricas obtenidas:', metricas);
+    
+    // PASO 5: Cargar datos de la BD en la simulación local y animar
+    await cargarYAnimarSimulacion(simulacion.id, pasos, metricas, seedNode);
+    
+  } catch (error) {
+    console.error('Error ejecutando simulación:', error);
+    alert('Error ejecutando simulación. Revisa la consola para más detalles.');
+  }
+}
+
+/**
+ * Carga una simulación desde la BD y la anima en el frontend
+ * @param {number} simulacionId - ID de la simulación
+ * @param {Array} pasos - Array de pasos desde la BD
+ * @param {Object} metricas - Métricas de la simulación
+ * @param {Object} seedNode - Nodo semilla
+ */
+async function cargarYAnimarSimulacion(simulacionId, pasos, metricas, seedNode) {
+  // Limpiar estado anterior
+  nodes.forEach(node => {
+    node.state = 'uninformed';
+    node.isSource = false;
+  });
+  
+  // Marcar nodo semilla como origen
   seedNode.state = 'active';
   seedNode.isSource = true;
+  
+  // Configurar simulación para animación
+  simulation.step = 0;
+  simulation.totalSteps = pasos.length - 1;
+  simulation.series = {};
+  simulation.series[modeloSeleccionado] = [];
+  
+  // Extraer datos de alcance de los pasos para graficar
+  pasos.forEach((paso, index) => {
+    const alcanceActual = (paso.nodosActivos + paso.nodosPasivos) / nodes.length * 100;
+    simulation.series[modeloSeleccionado].push(alcanceActual);
+  });
+  
+  console.log(`Cargada simulación con ${pasos.length} pasos`);
+  console.log('Serie de datos:', simulation.series[modeloSeleccionado]);
+  
+  // Actualizar UI
   selectNode(seedNode);
   updateGraphState();
   updateMetrics();
-
-  try {
-    // Crear y ejecutar simulación con el modelo seleccionado
-    console.log(`Ejecutando simulación con modelo: ${modeloSeleccionado}`);
-    
-    const configuracion = {
-      modelo: modeloSeleccionado,
-      nodoSemillaId: seedNode.id,
-      probabilidad: seedNode.propagationProb,
-      resistencia: seedNode.resistance,
-      umbral: seedNode.threshold
-    };
-
-    // TODO: Cuando SimulacionController esté completo, usar:
-    // const simulacion = await APIService.crearSimulacion(grafoId, seedNode.id, configuracion);
-    // const resultado = await APIService.ejecutarSimulacion(simulacion.id);
-    
-    // Por ahora, ejecutar localmente con el modelo seleccionado
-    console.log('Configuración de simulación:', configuracion);
-    stepSimulation();
-    startTimer();
-  } catch (error) {
-    console.error('Error ejecutando simulación:', error);
-  }
+  updateChart();
+  
+  // Iniciar animación
+  startTimer();
 }
 
 /**
@@ -1031,10 +992,14 @@ async function createNewGraph() {
     const nuevoGrafo = await APIService.crearGrafo();
     
     console.log('Grafo creado exitosamente:', nuevoGrafo);
-    alert(`✓ Grafo creado exitosamente con ${nuevoGrafo.nodos ? nuevoGrafo.nodos.length : 'múltiples'} nodos`);
+    alert(`✓ Grafo creado exitosamente con 250 nodos`);
     
-    // Recargar la página para mostrar el nuevo grafo
-    window.location.reload();
+    // Recargar lista de grafos y seleccionar el nuevo
+    await cargarListaGrafos();
+    grafoSelect.value = nuevoGrafo.id;
+    
+    // Cargar el nuevo grafo automáticamente
+    await cargarGrafo(nuevoGrafo.id);
   } catch (error) {
     console.error('Error creando grafo:', error);
     alert('Error creando grafo. Revisa la consola para más detalles.');
@@ -1042,6 +1007,150 @@ async function createNewGraph() {
       createGraphButton.disabled = false;
       createGraphButton.textContent = 'Crear nuevo grafo';
     }
+  }
+}
+
+/**
+ * Carga la lista de grafos disponibles y la muestra en el selector
+ */
+async function cargarListaGrafos() {
+  try {
+    if (!grafoSelect) {
+      console.warn('El selector de grafos no está inicializado aún');
+      return;
+    }
+
+    const grafos = await APIService.obtenerGrafos();
+    console.log('Grafos disponibles:', grafos.length);
+    
+    // Limpiar opciones anteriores
+    grafoSelect.innerHTML = '';
+    
+    if (grafos.length === 0) {
+      grafoSelect.innerHTML = '<option value="">No hay grafos disponibles</option>';
+    } else {
+      grafoSelect.innerHTML = '<option value="">-- Selecciona un grafo --</option>';
+      grafos.forEach(grafo => {
+        const option = document.createElement('option');
+        option.value = grafo.id;
+        option.textContent = `Grafo #${grafo.id} (${grafo.totalNodos || 250} nodos)`;
+        grafoSelect.appendChild(option);
+      });
+    }
+  } catch (error) {
+    console.error('Error cargando lista de grafos:', error);
+    if (grafoSelect) {
+      grafoSelect.innerHTML = '<option value="">Error cargando grafos</option>';
+    }
+  }
+}
+
+/**
+ * Carga un grafo específico en la visualización
+ * @param {number} grafoIdSeleccionado - ID del grafo a cargar
+ */
+async function cargarGrafo(grafoIdSeleccionado) {
+  try {
+    console.log(`Cargando grafo ${grafoIdSeleccionado}...`);
+    
+    // Obtener nodos y aristas del grafo
+    const nodosAPI = await APIService.obtenerNodosPorGrafo(grafoIdSeleccionado);
+    const aristasAPI = await APIService.obtenerAristasPorGrafo(grafoIdSeleccionado);
+
+    console.log('Nodos cargados:', nodosAPI.length, 'Aristas cargadas:', aristasAPI.length);
+
+    // Validar que hay nodos en el grafo
+    if (nodosAPI.length === 0) {
+      alert('El grafo no tiene nodos.');
+      return;
+    }
+
+    // Calcular métricas del grafo (betweenness centrality, grado)
+    await APIService.calcularMetricas(grafoIdSeleccionado);
+
+    // Transformar datos de API a formato compatible con D3
+    nodes = nodosAPI.map(nodo => ({
+      id: nodo.id,
+      x: width / 2,
+      y: height / 2,
+      state: 'uninformed',
+      propagationProb: nodo.probabilidadPropagacion ? Math.round(nodo.probabilidadPropagacion * 100) : 60,
+      resistance: 24, // TODO: obtener de la BD si está disponible
+      threshold: nodo.umbral ? Math.round(nodo.umbral * 100) : 40,
+      name: nodo.nombre || `Nodo ${nodo.id}`,
+      degree: 0,
+      isSource: false,
+      betweenness: nodo.betweenness || 0,
+      centralidadGrado: nodo.centralidadGrado || 0
+    }));
+
+    links = aristasAPI.map(arista => ({
+      source: nodes.find(n => n.id === arista.nodoOrigen.id),
+      target: nodes.find(n => n.id === arista.nodoDestino.id)
+    })).filter(link => link.source && link.target);
+
+    // Construir matriz de adyacencia
+    adjacency = Array.from({ length: nodes.length }, () => []);
+    links.forEach(link => {
+      link.source.degree += 1;
+      link.target.degree += 1;
+      const sourceIdx = nodes.indexOf(link.source);
+      const targetIdx = nodes.indexOf(link.target);
+      adjacency[sourceIdx].push(targetIdx);
+      adjacency[targetIdx].push(sourceIdx);
+    });
+
+    // Posicionar nodos en CÍRCULO PERFECTO (Watts-Strogatz ring layout)
+    const radius = 850;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    nodes.forEach((node, i) => {
+      const angle = (i / nodes.length) * 2 * Math.PI;
+      node.x = centerX + radius * Math.cos(angle);
+      node.y = centerY + radius * Math.sin(angle);
+      node.fx = node.x;
+      node.fy = node.y;
+    });
+
+    // Crear D3 Force Simulation
+    forceSimulation = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links)
+        .id(d => d.id)
+        .distance(150)
+        .strength(0.01))
+      .force('radial', d3.forceRadial(radius)
+        .strength(0.25))
+      .force('center', d3.forceCenter(centerX, centerY))
+      .alphaDecay(0.1)
+      .velocityDecay(0.5);
+
+    forceSimulation.tick(50);
+    
+    nodes.forEach(node => {
+      node.fx = null;
+      node.fy = null;
+    });
+    
+    forceSimulation.stop();
+
+    // Actualizar UI
+    grafoId = grafoIdSeleccionado;
+    document.querySelector('.top-stats').innerHTML = `Red: <strong>${nodes.length} nodos</strong>`;
+    document.querySelector('.graph-badge').textContent = `${nodes.length} nodos`;
+
+    // Inicializar visualización
+    renderGraph();
+    if (nodes.length > 0) {
+      selectNode(nodes[0]);
+    }
+    updateMetrics();
+    resetSimulation();
+    initializeChart();
+
+    console.log('Grafo cargado:', { grafoId, nodos: nodes.length, aristas: links.length });
+  } catch (error) {
+    console.error('Error cargando grafo:', error);
+    alert('Error cargando grafo. Revisa la consola para más detalles.');
   }
 }
 
@@ -1066,6 +1175,10 @@ function updateMetrics() {
 function initializeChart() {
   const { width, height, margin } = chartConfig;
   const chart = chartSvg.attr('viewBox', `0 0 ${width} ${height}`);
+  
+  // Limpiar chart anterior
+  chart.selectAll('*').remove();
+  
   const gridGroup = chart.append('g').attr('class', 'grid');
   const rows = 5;
   for (let i = 0; i <= rows; i++) {
@@ -1085,9 +1198,8 @@ function initializeChart() {
     .attr('height', height - margin.top - margin.bottom)
     .attr('fill', 'none')
     .lower();
-  chart.append('path').attr('class', 'line-path viral');
-  chart.append('path').attr('class', 'line-path cascade');
-  chart.append('path').attr('class', 'line-path threshold');
+  
+  // No crear paths aquí, se crearán dinámicamente en updateChart
   updateChart();
 }
 
@@ -1101,79 +1213,67 @@ function updateChart() {
     .y(d => yScale(d))
     .curve(d3.curveMonotoneX);
 
-  // Actualizar líneas con visibilidad controlada por checkboxes
-  chartSvg.select('.line-path.viral')
-    .datum(simulation.series.viral)
-    .attr('d', line)
-    .style('display', modelosVisiblesChart.viral ? 'block' : 'none');
+  // Limpiar líneas anteriores
+  chartSvg.selectAll('.line-path').remove();
   
-  chartSvg.select('.line-path.cascade')
-    .datum(simulation.series.cascade)
-    .attr('d', line)
-    .style('display', modelosVisiblesChart.cascade ? 'block' : 'none');
-  
-  chartSvg.select('.line-path.threshold')
-    .datum(simulation.series.threshold)
-    .attr('d', line)
-    .style('display', modelosVisiblesChart.threshold ? 'block' : 'none');
+  // Mostrar solo el modelo seleccionado
+  if (simulation.series[modeloSeleccionado]) {
+    const colorMap = { viral: '#d32f2f', cascade: '#1976d2', threshold: '#388e3c' };
+    const labelMap = { viral: 'Viral', cascade: 'Cascada', threshold: 'Threshold' };
+    
+    chartSvg.append('path')
+      .attr('class', `line-path ${modeloSeleccionado}`)
+      .datum(simulation.series[modeloSeleccionado])
+      .attr('d', line)
+      .style('stroke', colorMap[modeloSeleccionado])
+      .style('stroke-width', 2.5)
+      .style('fill', 'none')
+      .style('opacity', 0.9);
+    
+    // Añadir leyenda del modelo actual
+    chartSvg.selectAll('.legend').remove();
+    const legend = chartSvg.append('g')
+      .attr('class', 'legend')
+      .attr('transform', `translate(${width - margin.right - 120}, ${margin.top + 10})`);
+    
+    legend.append('rect')
+      .attr('width', 110)
+      .attr('height', 25)
+      .attr('fill', 'rgba(255,255,255,0.8)')
+      .attr('stroke', colorMap[modeloSeleccionado])
+      .attr('stroke-width', 2)
+      .attr('rx', 4);
+    
+    legend.append('circle')
+      .attr('cx', 10)
+      .attr('cy', 12.5)
+      .attr('r', 3)
+      .attr('fill', colorMap[modeloSeleccionado]);
+    
+    legend.append('text')
+      .attr('x', 20)
+      .attr('y', 17)
+      .attr('font-family', 'Inter, Segoe UI, sans-serif')
+      .attr('font-size', '12px')
+      .attr('font-weight', 'bold')
+      .attr('fill', '#333')
+      .text(labelMap[modeloSeleccionado]);
+  }
 }
 
-/* Ejecuta un paso de simulación, actualiza estados y recalcula la gráfica */
+/* Ejecuta un paso de simulación desde los datos de la BD */
 function stepSimulation() {
   if (simulation.step >= simulation.totalSteps) {
     stopTimer();
     return;
   }
 
-  const newStates = nodes.map(node => ({ ...node }));
-  const activeNodes = nodes.filter(n => n.state === 'active');
-  const activeSet = new Set(activeNodes.map(n => n.id));
-
-  nodes.forEach((node, index) => {
-    if (node.state !== 'uninformed') return;
-    const neighbors = adjacency[index];
-    const activeNeighbors = neighbors.filter(i => nodes[i].state === 'active').length;
-    const influenceRatio = node.degree ? activeNeighbors / node.degree : 0;
-    const chance = node.propagationProb / 100 * influenceRatio;
-    const threshold = node.threshold / 100;
-    const resistanceRoll = Math.random();
-
-    if (resistanceRoll < node.resistance / 100) {
-      newStates[index].state = 'resistant';
-      return;
-    }
-
-    if (chance > 0 && Math.random() < chance) {
-      newStates[index].state = Math.random() < 0.65 ? 'active' : 'passive';
-      return;
-    }
-
-    if (influenceRatio > threshold && Math.random() < 0.18) {
-      newStates[index].state = 'passive';
-    }
-  });
-
-  nodes.forEach((node, index) => {
-    node.state = newStates[index].state;
-    node.isSource = node.isSource && node.state === 'active';
-  });
-
+  // Nota: La lógica de propagación se ejecuta en el backend
+  // Aquí solo actualizamos la visualización basada en los datos de la BD
   simulation.step += 1;
-  simulation.series.viral.push(getSeriesValue('viral'));
-  simulation.series.cascade.push(getSeriesValue('cascade'));
-  simulation.series.threshold.push(getSeriesValue('threshold'));
   updateGraphState();
   updateMetrics();
   updateChart();
-}
-
-function getSeriesValue(type) {
-  const counts = { active: 0, passive: 0, resistant: 0, uninformed: 0 };
-  nodes.forEach(node => counts[node.state] += 1);
-  const informed = 100 - (counts.uninformed / nodes.length) * 100;
-  if (type === 'viral') return Math.min(100, informed + simulation.step * 2);
-  if (type === 'cascade') return Math.min(100, informed * 0.86 + simulation.step * 1.6);
-  return Math.min(100, informed * 0.78 + simulation.step * 1.2);
 }
 
 function startTimer() {
@@ -1210,7 +1310,8 @@ function togglePause() {
 function resetSimulation() {
   stopTimer();
   simulation.step = 0;
-  simulation.series = { viral: [0], cascade: [0], threshold: [0] };
+  simulation.series = {};
+  simulation.series[modeloSeleccionado] = [0];
   nodes.forEach(node => {
     node.state = 'uninformed';
     node.isSource = false;

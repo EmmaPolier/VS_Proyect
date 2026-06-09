@@ -44,12 +44,11 @@ public class AristaService {
 
     /**
      * Obtiene todas las aristas de un grafo específico.
+     * 
      * @param grafoId ID del grafo
      * @return Lista de aristas del grafo
      */
     public List<Arista> obtenerPorGrafo(int grafoId) {
-        return aristaRepository.findAll().stream()
-                .filter(a -> a.getNodoOrigen().getGrafo().getId().equals(grafoId))
-                .toList();
+        return aristaRepository.findByGrafo_Id(grafoId);
     }
 }

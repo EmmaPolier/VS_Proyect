@@ -8,6 +8,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.viralsim.models.Arista;
 import com.viralsim.models.EstadoCatalogo;
@@ -28,6 +30,8 @@ import com.viralsim.repositories.SimulacionRepository;
 
 @Service
 public class MotorSimulacion {
+
+    private static final Logger logger = LoggerFactory.getLogger(MotorSimulacion.class);
 
     @Autowired
     private SimulacionRepository simulacionRepository;
@@ -53,6 +57,9 @@ public class MotorSimulacion {
         Integer grafoId = simulacion.getGrafo().getId();
         Integer modeloId = simulacion.getModelo().getId();
         Integer nodoSemillaId = simulacion.getNodoSemilla().getId();
+
+        logger.info("🚀 Iniciando simulación [ID: {}] con grafo: {}, modelo: {}, nodo semilla: {}",
+                simulacionId, grafoId, modeloId, nodoSemillaId);
 
         List<Nodo> nodos = nodoRepository.findByGrafo_Id(grafoId);
         Map<Integer, Nodo> nodosPorId = nodos.stream()
@@ -105,10 +112,17 @@ public class MotorSimulacion {
 
         nodoRepository.save(nodoSemilla);
 
+        logger.info("🔄 Iniciando loop de propagación. Nodo semilla: {}, Estado: {}, ProbabilidadPropagacion: {}",
+                nodoSemilla.getId(), nodoSemilla.getEstado().getNombre(), nodoSemilla.getProbabilidadPropagacion());
+
         while (!nodosActivos.isEmpty()) {
             List<Nodo> nuevosInformados = estrategia.propagar(nodosActivos, nodosPorId, adyacencia, aristasPorPar);
 
+            logger.debug("📊 Paso {}: {} nodos activos entraron, {} nuevos informados devueltos",
+                    paso, nodosActivos.size(), nuevosInformados.size());
+
             if (nuevosInformados.isEmpty()) {
+                logger.info("✋ Sin nuevos informados en paso {}, terminando propagación", paso);
                 break; // No hay más nodos para informar, terminamos la simulación
             }
 
@@ -132,6 +146,9 @@ public class MotorSimulacion {
             pasoSim.setTotalResistentes(totalResistentes);
             pasoSim.setTotalInformados(totalInformados);
             PasoSimulacion pasoGuardado = pasoSimulacionRepository.save(pasoSim);
+
+            logger.debug("✅ Paso {} guardado: {} nuevos informados, total: {} de {}",
+                    paso, nuevosInformados.size(), totalInformados, nodos.size());
 
             for (Nodo nodo : nuevosInformados) {
                 NodoSimulacion nodoSim = new NodoSimulacion();
@@ -169,6 +186,9 @@ public class MotorSimulacion {
         simulacion.setResultado("COMPLETADA");
         simulacionRepository.save(simulacion);
 
+        logger.info("✨ Simulación completada [ID: {}]: {} pasos, {} informados ({:.1f}%), paso 50%: {}",
+                simulacionId, paso - 1, totalInformados, alcanceFinal * 100, paso50);
+
         return new ResultadoSimulacion(
                 simulacionId,
                 paso - 1,
@@ -199,13 +219,13 @@ public class MotorSimulacion {
 
         // Ejecutar cada modelo (1=Viral, 2=Cascada, 3=Threshold)
         for (int loopModeloId = 1; loopModeloId <= 3; loopModeloId++) {
-            int modeloId = loopModeloId;  // Capturar valor para el catch block
+            int modeloId = loopModeloId; // Capturar valor para el catch block
             try {
                 // **RESETEAR ESTADOS** de todos los nodos del grafo
                 List<Nodo> nodosGrafo = nodoRepository.findByGrafo_Id(grafoId);
                 EstadoCatalogo estadoNoInformado = estadoCatalogoRepository.findById(0)
-                    .orElseThrow(() -> new RuntimeException("Estado NO_INFORMADO no encontrado"));
-                
+                        .orElseThrow(() -> new RuntimeException("Estado NO_INFORMADO no encontrado"));
+
                 for (Nodo nodo : nodosGrafo) {
                     // Solo resetear si no es RESISTENTE (estado 3)
                     if (nodo.getEstado().getId() != 3) {
