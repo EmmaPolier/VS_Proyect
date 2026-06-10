@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+
 import com.viralsim.models.Arista;
 import com.viralsim.models.Nodo;
 
@@ -44,6 +45,9 @@ public class ModeloCascada implements EstrategiaPropagacion {
                     double probabilidadArista = arista.getProbabilidadArista() != null
                             ? arista.getProbabilidadArista()
                             : 0.5;
+                    if (probabilidadArista > 1) {
+                        probabilidadArista /= 100.0;
+                    }
 
                     if (prob <= probabilidadArista) {
                         nuevosInformados.add(vecino);

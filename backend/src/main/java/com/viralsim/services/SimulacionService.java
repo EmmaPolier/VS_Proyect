@@ -1,26 +1,27 @@
 package com.viralsim.services;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
+import com.viralsim.dto.MetricasSimulacion;
+import com.viralsim.metrics.CalculadorMetricas;
 import com.viralsim.models.Arista;
+import com.viralsim.models.ConfiguracionSimulacion;
 import com.viralsim.models.Grafo;
 import com.viralsim.models.ModeloPropagacion;
 import com.viralsim.models.Nodo;
-import com.viralsim.models.Simulacion;
-import com.viralsim.models.PasoSimulacion;
 import com.viralsim.models.NodoSimulacion;
+import com.viralsim.models.PasoSimulacion;
+import com.viralsim.models.Simulacion;
+import com.viralsim.repositories.AristaRepository;
+import com.viralsim.repositories.ConfiguracionSimulacionRepository;
 import com.viralsim.repositories.GrafoRepository;
 import com.viralsim.repositories.ModeloPropagacionRepository;
 import com.viralsim.repositories.NodoRepository;
-import com.viralsim.repositories.SimulacionRepository;
-import com.viralsim.repositories.PasoSimulacionRepository;
 import com.viralsim.repositories.NodoSimulacionRepository;
-import com.viralsim.repositories.ConfiguracionSimulacionRepository;
-import com.viralsim.models.ConfiguracionSimulacion;
-import com.viralsim.dto.MetricasSimulacion;
-import org.springframework.stereotype.Service;
-import com.viralsim.repositories.AristaRepository;
-import com.viralsim.metrics.CalculadorMetricas;
-
-import java.util.List;
+import com.viralsim.repositories.PasoSimulacionRepository;
+import com.viralsim.repositories.SimulacionRepository;
 
 @Service
 public class SimulacionService {
@@ -114,14 +115,19 @@ public class SimulacionService {
 
                 // Total informados
                 long totalInformados = nodos.stream()
-                                .filter(n -> n.getEstado().getNombre().equalsIgnoreCase("Informado"))
+                                .filter(n -> {
+                                    Integer estadoId = n.getEstado().getId();
+                                    return estadoId != null && (estadoId == 1 || estadoId == 2);
+                                })
                                 .count();
 
                 // Alcance en porcentaje
-                double alcancePorcentaje = (double) totalInformados / nodos.size() * 100;
+                double alcancePorcentaje = nodos.isEmpty() ? 0.0 : (double) totalInformados / nodos.size() * 100;
 
-                // Paso en que se alcanza el 50% (simplificado)
-                int paso50 = (int) Math.ceil(nodos.size() * 0.5);
+                Integer paso50 = simulacion.getPaso50Porciento();
+                if (paso50 == null) {
+                    paso50 = (int) Math.ceil(nodos.size() * 0.5);
+                }
 
                 // Top nodos por centralidad
                 List<Nodo> topGrado = nodos.stream()

@@ -2,7 +2,6 @@ package com.viralsim.controllers;
 
 import java.util.List;
 
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.viralsim.dto.NodoUpdateDTO;
 import com.viralsim.models.Nodo;
 import com.viralsim.services.NodoService;
 
@@ -27,19 +27,23 @@ public class NodoController {
     }
 
     @PostMapping
-    public ResponseEntity<Nodo> crearNodo(@RequestParam int grafoId, @RequestParam String nombre) {
+    public ResponseEntity<Nodo> crearNodo(@RequestParam Integer grafoId, @RequestParam String nombre) {
         return ResponseEntity.ok(nodoService.crearNodo(grafoId, nombre));
     }
 
     @GetMapping("/grafo/{grafoId}")
-    public ResponseEntity<List<Nodo>> obtenerPorGrafo(@PathVariable int grafoId) {
+    public ResponseEntity<List<Nodo>> obtenerPorGrafo(@PathVariable Integer grafoId) {
         return ResponseEntity.ok(nodoService.obtenerPorGrafo(grafoId));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Nodo> obtenerPorId(@PathVariable int id) {
+  @GetMapping("/{id}")
+public ResponseEntity<Nodo> obtenerPorId(@PathVariable Integer id) {
+    try {
         return ResponseEntity.ok(nodoService.obtenerPorId(id));
+    } catch (RuntimeException e) {
+        return ResponseEntity.notFound().build();
     }
+}
 
     /**
      * Actualiza un nodo existente.
@@ -48,9 +52,15 @@ public class NodoController {
      * @return El nodo actualizado
      */
     @PutMapping("/{id}")
-        public ResponseEntity<Nodo> actualizarNodo(@PathVariable int id, @RequestBody Nodo nodoActualizado) {
+    public ResponseEntity<Nodo> actualizarNodo(
+            @PathVariable Integer id,
+            @RequestBody NodoUpdateDTO nodoActualizado) {
+        try {
             return ResponseEntity.ok(nodoService.actualizarNodo(id, nodoActualizado));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
         }
+    }
 
     /**
      * Obtiene los nodos de un grafo ordenados por centralidad de grado (top primero).
@@ -58,7 +68,7 @@ public class NodoController {
      * @return Lista de nodos ordenada por centralidadGrado descendente
      */
     @GetMapping("/grafo/{grafoId}/top-grado")
-    public ResponseEntity<List<Nodo>> obtenerTopPorGrado(@PathVariable int grafoId) {
+    public ResponseEntity<List<Nodo>> obtenerTopPorGrado(@PathVariable Integer grafoId) {
         return ResponseEntity.ok(nodoService.obtenerTopPorGrado(grafoId));
     }
 
@@ -68,7 +78,7 @@ public class NodoController {
      * @return Lista de nodos ordenada por betweenness descendente
      */
     @GetMapping("/grafo/{grafoId}/top-betweenness")
-    public ResponseEntity<List<Nodo>> obtenerTopPorBetweenness(@PathVariable int grafoId) {
+    public ResponseEntity<List<Nodo>> obtenerTopPorBetweenness(@PathVariable Integer grafoId) {
         return ResponseEntity.ok(nodoService.obtenerTopPorBetweenness(grafoId));
     }
 }

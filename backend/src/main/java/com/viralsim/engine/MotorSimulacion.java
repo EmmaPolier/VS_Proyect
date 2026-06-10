@@ -6,10 +6,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import com.viralsim.models.Arista;
 import com.viralsim.models.EstadoCatalogo;
@@ -33,34 +33,27 @@ public class MotorSimulacion {
 
     private static final Logger logger = LoggerFactory.getLogger(MotorSimulacion.class);
 
-    @Autowired
-    private SimulacionRepository simulacionRepository;
-    @Autowired
-    private NodoRepository nodoRepository;
-    @Autowired
-    private AristaRepository aristaRepository;
-    @Autowired
-    private PasoSimulacionRepository pasoSimulacionRepository;
-    @Autowired
-    private NodoSimulacionRepository nodoSimulacionRepository;
-    @Autowired
-    private EstadoCatalogoRepository estadoCatalogoRepository;
-    @Autowired
-    private GrafoRepository grafoRepository;
-    @Autowired
-    private ModeloPropagacionRepository modeloPropagacionRepository;
+    @Autowired private SimulacionRepository simulacionRepository;
+    @Autowired private NodoRepository nodoRepository;
+    @Autowired private AristaRepository aristaRepository;
+    @Autowired private PasoSimulacionRepository pasoSimulacionRepository;
+    @Autowired private NodoSimulacionRepository nodoSimulacionRepository;
+    @Autowired private EstadoCatalogoRepository estadoCatalogoRepository;
+    @Autowired private GrafoRepository grafoRepository;
+    @Autowired private ModeloPropagacionRepository modeloPropagacionRepository;
 
     public ResultadoSimulacion ejecutar(int simulacionId) {
         Simulacion simulacion = simulacionRepository.findById(simulacionId)
-                .orElseThrow(() -> new RuntimeException("Simulación no encontrada" + simulacionId));
+                .orElseThrow(() -> new RuntimeException("Simulación no encontrada: " + simulacionId));
 
-        Integer grafoId = simulacion.getGrafo().getId();
-        Integer modeloId = simulacion.getModelo().getId();
+        Integer grafoId      = simulacion.getGrafo().getId();
+        Integer modeloId     = simulacion.getModelo().getId();
         Integer nodoSemillaId = simulacion.getNodoSemilla().getId();
 
-        logger.info("🚀 Iniciando simulación [ID: {}] con grafo: {}, modelo: {}, nodo semilla: {}",
+        logger.info("🚀 Iniciando simulación [ID: {}] grafo={} modelo={} semilla={}",
                 simulacionId, grafoId, modeloId, nodoSemillaId);
 
+        // ── Cargar nodos y aristas ────────────────────────────────────────────
         List<Nodo> nodos = nodoRepository.findByGrafo_Id(grafoId);
         Map<Integer, Nodo> nodosPorId = nodos.stream()
                 .collect(Collectors.toMap(Nodo::getId, n -> n));
@@ -68,75 +61,86 @@ public class MotorSimulacion {
         List<Arista> aristas = aristaRepository.findByGrafo_Id(grafoId);
 
         Map<Integer, List<Nodo>> adyacencia = new HashMap<>();
-        for (Nodo nodo : nodos) {
-            adyacencia.put(nodo.getId(), new ArrayList<>());
-        }
-
-        Map<String, Arista> aristasPorPar = new HashMap<>();
+        Map<String, Arista> aristasPorPar   = new HashMap<>();
+        for (Nodo nodo : nodos) adyacencia.put(nodo.getId(), new ArrayList<>());
         for (Arista arista : aristas) {
-            Integer origen = arista.getNodoOrigen().getId();
+            Integer origen  = arista.getNodoOrigen().getId();
             Integer destino = arista.getNodoDestino().getId();
-
             adyacencia.get(origen).add(arista.getNodoDestino());
             adyacencia.get(destino).add(arista.getNodoOrigen());
-
             Integer min = Math.min(origen, destino);
             Integer max = Math.max(origen, destino);
             aristasPorPar.put(min + "-" + max, arista);
         }
 
-        EstrategiaPropagacion estrategia;
-        switch (modeloId) {
-            case 1:
-                estrategia = new ModeloViral();
-                break;
-            case 2:
-                estrategia = new ModeloCascada();
-                break;
-            case 3:
-                estrategia = new ModeloThreshold();
-                break;
-            default:
-                throw new RuntimeException("Modelo no soportado: " + modeloId);
-        }
+        // ── Estados del catálogo ──────────────────────────────────────────────
+        EstadoCatalogo estadoNoInformado = estadoCatalogoRepository.findById(0)
+                .orElseThrow(() -> new RuntimeException("Estado NO_INFORMADO no encontrado"));
+        EstadoCatalogo estadoActivo      = estadoCatalogoRepository.findById(1)
+                .orElseThrow(() -> new RuntimeException("Estado ACTIVO no encontrado"));
+        EstadoCatalogo estadoPasivo      = estadoCatalogoRepository.findById(2)
+                .orElseThrow(() -> new RuntimeException("Estado PASIVO no encontrado"));
+        EstadoCatalogo estadoResistente  = estadoCatalogoRepository.findById(3)
+                .orElseThrow(() -> new RuntimeException("Estado RESISTENTE no encontrado"));
 
+        // ── Estrategia de propagación ─────────────────────────────────────────
+        EstrategiaPropagacion estrategia = switch (modeloId) {
+            case 1  -> new ModeloViral();
+            case 2  -> new ModeloCascada();
+            case 3  -> new ModeloThreshold();
+            default -> throw new RuntimeException("Modelo no soportado: " + modeloId);
+        };
+
+        // ── Reiniciar estados (respetar resistentes) ──────────────────────────
+        for (Nodo nodo : nodos) {
+            if (nodo.getEstado().getId() != 3) {
+                nodo.setEstado(estadoNoInformado);
+            }
+        }
+        nodoRepository.saveAll(nodos);
+
+        // ── Nodo semilla → activo ─────────────────────────────────────────────
         Nodo nodoSemilla = nodosPorId.get(nodoSemillaId);
-        EstadoCatalogo estadoActivo = estadoCatalogoRepository.findById(1)
-                .orElseThrow(() -> new RuntimeException("Estado INFORMADO_ACTIVO no encontrado"));
         nodoSemilla.setEstado(estadoActivo);
+        nodoRepository.save(nodoSemilla);
 
         List<Nodo> nodosActivos = new ArrayList<>();
         nodosActivos.add(nodoSemilla);
+
         int paso = 1;
+        int ultimoPasoGuardado = 0;
         Integer paso50 = null;
 
-        nodoRepository.save(nodoSemilla);
-
-        logger.info("🔄 Iniciando loop de propagación. Nodo semilla: {}, Estado: {}, ProbabilidadPropagacion: {}",
-                nodoSemilla.getId(), nodoSemilla.getEstado().getNombre(), nodoSemilla.getProbabilidadPropagacion());
-
+        // ── Loop principal ────────────────────────────────────────────────────
         while (!nodosActivos.isEmpty()) {
-            List<Nodo> nuevosInformados = estrategia.propagar(nodosActivos, nodosPorId, adyacencia, aristasPorPar);
 
-            logger.debug("📊 Paso {}: {} nodos activos entraron, {} nuevos informados devueltos",
-                    paso, nodosActivos.size(), nuevosInformados.size());
+            // 1. Propagar: obtener nuevos infectados en este paso
+            List<Nodo> nuevosInformados = estrategia.propagar(
+                    nodosActivos, nodosPorId, adyacencia, aristasPorPar);
 
-            if (nuevosInformados.isEmpty()) {
-                logger.info("✋ Sin nuevos informados en paso {}, terminando propagación", paso);
-                break; // No hay más nodos para informar, terminamos la simulación
+            // 2. Transición active → passive para los nodos que ya propagaron
+            for (Nodo nodoActivo : nodosActivos) {
+                nodoActivo.setEstado(estadoPasivo);
+                nodoRepository.save(nodoActivo);
             }
 
+            // 3. Marcar nuevos como activos
             for (Nodo nodo : nuevosInformados) {
                 nodo.setEstado(estadoActivo);
                 nodoRepository.save(nodo);
             }
 
-            int totalActivos = (int) nodos.stream().filter(n -> n.getEstado().getId() == 1).count();
-            int totalPasivos = (int) nodos.stream().filter(n -> n.getEstado().getId() == 2).count();
+            // 4. Contadores con estados actualizados
+            int totalActivos     = (int) nodos.stream().filter(n -> n.getEstado().getId() == 1).count();
+            int totalPasivos     = (int) nodos.stream().filter(n -> n.getEstado().getId() == 2).count();
             int totalResistentes = (int) nodos.stream().filter(n -> n.getEstado().getId() == 3).count();
-            int totalInformados = totalActivos + totalPasivos;
-            int totalNoInformados = 250 - totalInformados - totalResistentes;
+            int totalInformados  = totalActivos + totalPasivos;
+            int totalNodos       = nodos.size();
 
+            logger.info("📊 Paso {}: activos={} pasivos={} resistentes={} informados={}/{}",
+                    paso, totalActivos, totalPasivos, totalResistentes, totalInformados, totalNodos);
+
+            // 5. Guardar PasoSimulacion
             PasoSimulacion pasoSim = new PasoSimulacion();
             pasoSim.setSimulacion(simulacion);
             pasoSim.setNumeroPaso(paso);
@@ -146,52 +150,63 @@ public class MotorSimulacion {
             pasoSim.setTotalResistentes(totalResistentes);
             pasoSim.setTotalInformados(totalInformados);
             PasoSimulacion pasoGuardado = pasoSimulacionRepository.save(pasoSim);
+            ultimoPasoGuardado = paso;
 
-            logger.debug("✅ Paso {} guardado: {} nuevos informados, total: {} de {}",
-                    paso, nuevosInformados.size(), totalInformados, nodos.size());
-
-            for (Nodo nodo : nuevosInformados) {
-                NodoSimulacion nodoSim = new NodoSimulacion();
-                nodoSim.setSimulacion(simulacion);
-                nodoSim.setPasoSimulacion(pasoGuardado);
-                nodoSim.setNodo(nodo);
-                nodoSim.setEstado(nodo.getEstado());
-                nodoSim.setPasoInfeccion(paso);
-                nodoSimulacionRepository.save(nodoSim);
+            // 6. Guardar NodoSimulacion para TODOS los nodos en este paso
+            //    (el frontend necesita el estado completo del grafo por paso)
+            for (Nodo nodo : nodos) {
+                NodoSimulacion ns = new NodoSimulacion();
+                ns.setSimulacion(simulacion);
+                ns.setPasoSimulacion(pasoGuardado);
+                ns.setNodo(nodo);
+                ns.setEstado(nodo.getEstado());
+                // pasoInfeccion: el paso en que se infectó por primera vez
+                if (nuevosInformados.contains(nodo)) {
+                    ns.setPasoInfeccion(paso);
+                } else if (nodo.getId().equals(nodoSemillaId) && paso == 1) {
+                    ns.setPasoInfeccion(1);
+                }
+                nodoSimulacionRepository.save(ns);
             }
 
-            double alcance = (double) totalInformados / 250;
+            // 7. Verificar paso 50%
+            double alcance = (double) totalInformados / totalNodos;
+            if (alcance >= 0.5 && paso50 == null) paso50 = paso;
 
-            if (alcance >= 0.5 && paso50 == null) {
-                paso50 = paso;
-            }
-
+            // 8. Próxima iteración: solo los nuevos activos propagan
             nodosActivos = nuevosInformados.stream()
                     .filter(n -> n.getEstado().getId() == 1)
                     .collect(Collectors.toList());
 
             paso++;
+
+            // Parada de seguridad
+            if (paso > totalNodos + 10) {
+                logger.warn("⚠️ Parada de seguridad en paso {}", paso);
+                break;
+            }
         }
 
-        int totalActivos = (int) nodos.stream().filter(n -> n.getEstado().getId() == 1).count();
-        int totalPasivos = (int) nodos.stream().filter(n -> n.getEstado().getId() == 2).count();
+        // ── Contadores finales ────────────────────────────────────────────────
+        int totalActivos     = (int) nodos.stream().filter(n -> n.getEstado().getId() == 1).count();
+        int totalPasivos     = (int) nodos.stream().filter(n -> n.getEstado().getId() == 2).count();
         int totalResistentes = (int) nodos.stream().filter(n -> n.getEstado().getId() == 3).count();
-        int totalInformados = totalActivos + totalPasivos;
-        int totalNoInformados = 250 - totalInformados - totalResistentes;
-        double alcanceFinal = (double) totalInformados / 250;
+        int totalInformados  = totalActivos + totalPasivos;
+        int totalNoInformados = nodos.size() - totalInformados - totalResistentes;
+        double alcanceFinal  = (double) totalInformados / nodos.size();
 
-        simulacion.setTotalPasos(paso - 1);
+        simulacion.setTotalPasos(ultimoPasoGuardado);
         simulacion.setTotalInformados(totalInformados);
         simulacion.setPaso50Porciento(paso50);
         simulacion.setResultado("COMPLETADA");
         simulacionRepository.save(simulacion);
 
-        logger.info("✨ Simulación completada [ID: {}]: {} pasos, {} informados ({:.1f}%), paso 50%: {}",
-                simulacionId, paso - 1, totalInformados, alcanceFinal * 100, paso50);
+        logger.info("✨ Simulación {} completada: {} pasos, {} informados ({:.1f}%)",
+                simulacionId, ultimoPasoGuardado, totalInformados, alcanceFinal * 100);
 
         return new ResultadoSimulacion(
                 simulacionId,
-                paso - 1,
+                ultimoPasoGuardado,
                 totalInformados,
                 alcanceFinal * 100,
                 paso50,
@@ -201,54 +216,44 @@ public class MotorSimulacion {
                 totalNoInformados);
     }
 
-    /**
-     * Compara los 3 modelos de propagación sobre el mismo grafo y nodo semilla.
-     * 
-     * @param grafoId       ID del grafo a usar
-     * @param nodoSemillaId ID del nodo inicial
-     * @return Lista de 3 ResultadoSimulacion (Viral, Cascada, Threshold)
-     */
+    // ── Comparar 3 modelos ────────────────────────────────────────────────────
     public List<ResultadoSimulacion> compararModelos(int grafoId, int nodoSemillaId) {
         List<ResultadoSimulacion> resultados = new ArrayList<>();
 
-        // Verificar que el grafo y nodo existen
         Grafo grafo = grafoRepository.findById(grafoId)
                 .orElseThrow(() -> new RuntimeException("Grafo no encontrado: " + grafoId));
         Nodo nodoSemilla = nodoRepository.findById(nodoSemillaId)
                 .orElseThrow(() -> new RuntimeException("Nodo semilla no encontrado: " + nodoSemillaId));
 
-        // Ejecutar cada modelo (1=Viral, 2=Cascada, 3=Threshold)
-        for (int loopModeloId = 1; loopModeloId <= 3; loopModeloId++) {
-            int modeloId = loopModeloId; // Capturar valor para el catch block
-            try {
-                // **RESETEAR ESTADOS** de todos los nodos del grafo
-                List<Nodo> nodosGrafo = nodoRepository.findByGrafo_Id(grafoId);
-                EstadoCatalogo estadoNoInformado = estadoCatalogoRepository.findById(0)
-                        .orElseThrow(() -> new RuntimeException("Estado NO_INFORMADO no encontrado"));
+        EstadoCatalogo estadoNoInformado = estadoCatalogoRepository.findById(0)
+                .orElseThrow(() -> new RuntimeException("Estado NO_INFORMADO no encontrado"));
 
+        for (int loopModeloId = 1; loopModeloId <= 3; loopModeloId++) {
+            int modeloId = loopModeloId;
+            try {
+                // Resetear estados (respetar resistentes)
+                List<Nodo> nodosGrafo = nodoRepository.findByGrafo_Id(grafoId);
                 for (Nodo nodo : nodosGrafo) {
-                    // Solo resetear si no es RESISTENTE (estado 3)
                     if (nodo.getEstado().getId() != 3) {
                         nodo.setEstado(estadoNoInformado);
-                        nodoRepository.save(nodo);
                     }
                 }
-                // Crear simulación para este modelo
-                Simulacion simulacion = new Simulacion();
-                simulacion.setGrafo(grafo);
+                nodoRepository.saveAll(nodosGrafo);
 
                 ModeloPropagacion modelo = modeloPropagacionRepository.findById(modeloId)
                         .orElseThrow(() -> new RuntimeException("Modelo no encontrado: " + modeloId));
+
+                Simulacion simulacion = new Simulacion();
+                simulacion.setGrafo(grafo);
                 simulacion.setModelo(modelo);
                 simulacion.setNodoSemilla(nodoSemilla);
 
-                // Guardar y ejecutar
                 Simulacion simGuardada = simulacionRepository.save(simulacion);
                 ResultadoSimulacion resultado = ejecutar(simGuardada.getId());
                 resultados.add(resultado);
 
             } catch (Exception e) {
-                throw new RuntimeException("Error al comparar modelo " + modeloId + ": " + e.getMessage());
+                throw new RuntimeException("Error comparando modelo " + modeloId + ": " + e.getMessage());
             }
         }
         return resultados;
@@ -263,6 +268,5 @@ public class MotorSimulacion {
             int totalActivos,
             int totalPasivos,
             int totalResistentes,
-            int totalNoInformados) {
-    }
+            int totalNoInformados) {}
 }

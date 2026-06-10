@@ -36,8 +36,12 @@ public class ModeloThreshold implements EstrategiaPropagacion {
                 }
 
                 double fraccion = (double) vecinosInformados / totalVecinos;
+                double umbral = nodo.getUmbral();
+                if (umbral > 1) {
+                    umbral /= 100.0;
+                }
 
-                if (fraccion >= nodo.getUmbral() && !idsNuevos.contains(nodo.getId())) {
+                if (fraccion >= umbral && !idsNuevos.contains(nodo.getId())) {
                     idsNuevos.add(nodo.getId());
                     nuevosInformados.add(nodo);
                 }

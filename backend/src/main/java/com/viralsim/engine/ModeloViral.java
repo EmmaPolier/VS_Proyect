@@ -6,8 +6,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import com.viralsim.models.Arista;
 import com.viralsim.models.Nodo;
 
@@ -52,10 +54,14 @@ public class ModeloViral implements EstrategiaPropagacion {
                 }
 
                 double prob = random.nextDouble();
+                double probabilidad = activo.getProbabilidadPropagacion();
+                if (probabilidad > 1) {
+                    probabilidad /= 100.0;
+                }
                 logger.debug("      → Vecino ID={} prob={:.2f} vs threshold={:.2f}",
-                        vecino.getId(), prob, activo.getProbabilidadPropagacion());
+                        vecino.getId(), prob, probabilidad);
 
-                if (prob <= activo.getProbabilidadPropagacion()) {
+                if (prob <= probabilidad) {
                     idsNuevos.add(vecino.getId());
                     nuevosInformados.add(vecino);
                     logger.debug("        ✅ Vecino ID={} INFECTADO", vecino.getId());
